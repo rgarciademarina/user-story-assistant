@@ -1,6 +1,9 @@
 ﻿from fastapi import FastAPI
-from langchain.llms import Ollama
+from langchain_ollama import OllamaLLM as Ollama
 from pydantic_settings import BaseSettings
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="User Story Assistant")
 

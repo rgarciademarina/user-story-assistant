@@ -1,1 +1,1 @@
-from langchain.llms import Ollama
+from langchain_ollama import OllamaLLM as Ollama
