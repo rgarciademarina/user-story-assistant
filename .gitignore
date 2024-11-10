@@ -1,0 +1,40 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.env
+.venv
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+data/vector_store/*
+logs/*
+.pytest_cache/
+
+# LangFlow
+.langflow/
