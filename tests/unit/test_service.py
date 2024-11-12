@@ -27,32 +27,11 @@ async def test_analyze_user_story(llm_service):
     """
     result = await llm_service.analyze_user_story(user_story)
     
-    assert isinstance(result, dict)
-    assert "improvements" in result
-    assert "edge_cases" in result
-    assert "testing_strategies" in result
-
-@pytest.mark.asyncio
-async def test_analyze_user_story_response_structure(llm_service):
-    """Test que verifica la estructura detallada de la respuesta"""
-    user_story = """
-    Como usuario quiero poder iniciar sesión 
-    para acceder a mi cuenta personal
-    """
-    result = await llm_service.analyze_user_story(user_story)
+    # Verificar que el resultado es un diccionario
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
     
-    # Verificar estructura básica
-    assert isinstance(result, dict)
-    assert "improvements" in result
-    assert "edge_cases" in result
-    assert "testing_strategies" in result
-    
-    # Verificar que cada campo es una lista
-    assert isinstance(result["improvements"], list)
-    assert isinstance(result["edge_cases"], list)
-    assert isinstance(result["testing_strategies"], list)
-    
-    # Verificar que las listas no están vacías
-    assert len(result["improvements"]) > 0
-    assert len(result["edge_cases"]) > 0
-    assert len(result["testing_strategies"]) > 0
+    # Verificar que contiene las claves esperadas
+    for key in ["improvements", "edge_cases", "testing_strategies"]:
+        assert key in result, f"Falta la clave '{key}' en el resultado"
+        assert isinstance(result[key], str), f"El valor de '{key}' debe ser una cadena"
+        assert len(result[key].strip()) > 0, f"El valor de '{key}' no debe estar vacío"
