@@ -2,12 +2,16 @@
 
 0. [Ficha del proyecto](#0-ficha-del-proyecto)
 1. [Descripción general del producto](#1-descripción-general-del-producto)
-2. [Arquitectura del sistema](#2-arquitectura-del-sistema)
-3. [Modelo de datos](#3-modelo-de-datos)
-4. [Especificación de la API](#4-especificación-de-la-api)
-5. [Historias de usuario](#5-historias-de-usuario)
-6. [Tickets de trabajo](#6-tickets-de-trabajo)
-7. [Pull requests](#7-pull-requests)
+2. [Configuración del proyecto](#2-configuración-del-proyecto)
+3. [Arquitectura del sistema](#3-arquitectura-del-sistema)
+   - [3.1. Diagrama de arquitectura](#31-diagrama-de-arquitectura)
+   - [3.2. Descripción de componentes principales](#32-descripción-de-componentes-principales)
+   - [3.3. Descripción de alto nivel del proyecto y estructura de ficheros](#33-descripción-de-alto-nivel-del-proyecto-y-estructura-de-ficheros)
+4. [Modelo de datos](#4-modelo-de-datos)
+5. [Especificación de la API](#5-especificación-de-la-api)
+6. [Historias de usuario](#6-historias-de-usuario)
+7. [Tickets de trabajo](#7-tickets-de-trabajo)
+8. [Pull requests](#8-pull-requests)
 
 ---
 
@@ -49,21 +53,54 @@ Mejorar la calidad y completitud de las historias de usuario mediante:
 - Identificación proactiva de casos esquina
 - Recomendaciones comprensivas de estrategias de testing
 
-### **1.3. Diseño y experiencia de usuario:**
+### **1.3. Diseño y experiencia de usuario**
 
 Proporciona imágenes y/o videotutorial mostrando la experiencia del usuario desde que aterriza en la aplicación, pasando por todas las funcionalidades principales.
 
-TBD
+**TBD**
 
-### **1.4. Instrucciones de instalación:**
+---
+
+## 2. Configuración del proyecto
+
+### **2.1. Instrucciones de instalación**
 
 Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
 
-TBD
+1. **Clonar el Repositorio**
 
-## 2. Arquitectura del Sistema
+   ```bash
+   git clone https://github.com/rgarciademarina/AI4Devs-finalproject-RGM.git
+   cd AI4Devs-finalproject-RGM
+   ```
 
-### **2.1. Diagrama de arquitectura:**
+2. **Instalar Dependencias**
+
+   ```bash
+   poetry install
+   ```
+
+3. **Configurar Variables de Entorno**
+
+   Crea un archivo `.env` basado en `.env.example` y completa las variables necesarias.
+
+4. **Ejecutar los Tests**
+
+   ```bash
+   poetry run pytest --log-cli-level=DEBUG
+   ```
+
+5. **Iniciar la Aplicación**
+
+   ```bash
+   python src/llm/run_model.py --model llama-3.2-11b
+   ```
+
+---
+
+## 3. Arquitectura del sistema
+
+### **3.1. Diagrama de arquitectura**
 
 Usa el formato que consideres más adecuado para representar los componentes principales de la aplicación y las tecnologías utilizadas. Explica si sigue algún patrón predefinido, justifica por qué se ha elegido esta arquitectura, y destaca los beneficios principales que aportan al proyecto y justifican su uso, así como sacrificios o déficits que implica.
 
@@ -122,11 +159,11 @@ classDiagram
     Step <|-- TestingStep
 ```
 
-### **2.2. Descripción de componentes principales:**
+### **3.2. Descripción de componentes principales**
 
 En esta sección se describen los componentes más importantes del sistema, incluyendo la tecnología utilizada.
 
-#### LLM Service
+#### **LLM Service**
 
 - **Tecnología principal**: Llama 3.2:11b
 - **Framework**: LangChain
@@ -137,7 +174,7 @@ En esta sección se describen los componentes más importantes del sistema, incl
   - Manejo de tokens
   - Procesamiento de respuestas
 
-#### API Service
+#### **API Service**
 
 - **Framework**: FastAPI
 - **Base de datos**: PostgreSQL
@@ -148,30 +185,25 @@ En esta sección se describen los componentes más importantes del sistema, incl
   - Documentación automática
   - Gestión de sesiones
 
-#### Conectores
+#### **Conectores**
 
-- **Jira**: Biblioteca `atlassian-python-api`
-- **Confluence**: Biblioteca `atlassian-python-api`
-- **GitHub**: Biblioteca `PyGithub`
-- **Propósito**: Integración con sistemas externos.
+- **Integraciones**: Jira, GitHub
+- **Propósito**: Integración con sistemas existentes para sincronización de datos.
 - **Características clave**:
-  - Gestión de credenciales
-  - Caché de datos
-  - Manejo de rate limits
-  - Sincronización periódica
+  - Sincronización de historias de usuario
+  - Actualización de estados
+  - Gestión de webhooks
 
-#### Frontend (Básico para MVP)
+#### **Frontend**
 
-- **Framework**: LangFlow
-- **UI Library**: LangFlow (interfaz gráfica simplificada)
-- **Propósito**: Interfaz de usuario para interacción con el sistema.
+- **Framework**: Vue.js o React (dependiendo de la elección)
+- **Propósito**: Proporcionar una interfaz de usuario interactiva.
 - **Características clave**:
-  - Autenticación de usuarios
-  - Formularios de entrada
+  - Interfaz intuitiva
   - Visualización de resultados
   - Feedback en tiempo real
 
-### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
+### **3.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
 El proyecto sigue una arquitectura hexagonal (también conocida como puertos y adaptadores) para mantener el dominio de negocio aislado de las dependencias externas. La estructura de ficheros refleja esta separación de responsabilidades:
 
@@ -198,81 +230,49 @@ story-refinement-assistant/
 │   │   ├── __init__.py
 │   │   ├── routes/
 │   │   │   ├── __init__.py
-│   │   │   ├── story.py          # Endpoints de historias
+│   │   │   ├── user_story.py      # Endpoints relacionados con historias de usuario
 │   │   │   └── workflow.py       # Endpoints de workflow
-│   │   └── dependencies.py
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── workflow/
-│   │   │   ├── __init__.py
-│   │   │   ├── manager.py
-│   │   │   └── steps/
-│   │   │       ├── __init__.py
-│   │   │       ├── refinement.py
-│   │   │       ├── corner_case.py
-│   │   │       └── testing.py
-│   │   └── assistant.py
 │   ├── llm/
 │   │   ├── __init__.py
-│   │   ├── service.py             # Servicio LLM principal
-│   │   └── prompts/               # Templates de prompts
-│   │       ├── __init__.py
-│   │       ├── refinement.py
-│   │       ├── corner_case.py
-│   │       └── testing.py
-│   ├── integrations/
-│   │   ├── __init__.py
-│   │   ├── jira/
+│   │   ├── service.py             # Servicio de LLM
+│   │   ├── config.py              # Configuración del LLM
+│   │   ├── prompts/
 │   │   │   ├── __init__.py
-│   │   │   └── client.py
-│   │   ├── confluence/
-│   │   │   ├── __init__.py
-│   │   │   └── client.py
-│   │   └── github/
-│   │       ├── __init__.py
-│   │       └── client.py
-│   ├── models/
+│   │   │   ├── refinement.py      # Plantillas de prompts para refinamiento
+│   │   │   ├── corner_case.py     # Plantillas de prompts para casos esquina
+│   │   │   └── testing.py         # Plantillas de prompts para testing
+│   ├── workflows/
 │   │   ├── __init__.py
-│   │   ├── story.py               # Modelos de datos
-│   │   └── workflow.py
-│   └── utils/
+│   │   └── manager.py             # Manager de flujo de trabajo
+│   └── tests/
 │       ├── __init__.py
-│       ├── logging.py
-│       └── helpers.py
+│       ├── unit/
+│       │   ├── __init__.py
+│       │   └── test_service.py     # Tests unitarios para el servicio LLM
+│       └── integration/
+│           ├── __init__.py
+│           └── test_endpoints.py   # Tests de integración para endpoints
 ├── tests/
-│   ├── __init__.py
-│   ├── conftest.py                # Configuración de pytest
 │   ├── unit/
 │   │   ├── __init__.py
-│   │   ├── test_workflow.py
-│   │   └── test_llm.py
-│   └── integration/
-│       ├── __init__.py
-│       └── test_api.py
-└── data/
-    └── vector_store/              # Almacenamiento de índices
+│   │   └── test_service.py
+│   └── test_main.py
+└── frontend/
+    ├── package.json
+    ├── src/
+    │   ├── App.vue
+    │   ├── components/
+    │   └── views/
+    └── public/
 ```
 
-#### Descripción de Carpetas Principales:
+---
 
-- **src/**: Contiene todo el código fuente del proyecto
-  - **api/**: Implementación de la API REST (adaptador primario)
-  - **core/**: Lógica de negocio y reglas de dominio
-  - **llm/**: Servicios de integración con modelos de lenguaje
-  - **rag/**: Implementación del sistema de recuperación aumentada
-  - **integrations/**: Adaptadores para sistemas externos
-  - **models/**: Definición de modelos de datos
-  - **utils/**: Utilidades compartidas
+## 4. Modelo de datos
 
-- **tests/**: Tests organizados por tipo
-  - **unit/**: Tests unitarios de componentes individuales
-  - **integration/**: Tests de integración entre componentes
-  - **e2e/**: Tests end-to-end de flujos completos
+> Describe el modelo de datos utilizado en el sistema, incluyendo entidades principales, relaciones y cualquier esquema relevante.
 
-- **docs/**: Documentación completa del proyecto
-  - **api/**: Documentación de la API REST
-  - **guides/**: Guías de usuario y desarrollo
-  - **technical/**: Documentación técnica detallada
+**TBD**
 
 #### Patrones y Principios:
 
