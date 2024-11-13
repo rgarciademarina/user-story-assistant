@@ -1,4 +1,5 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
+from typing import Optional
 
 class LLMConfig(BaseSettings):
     """Configuración para el servicio LLM"""
@@ -8,12 +9,12 @@ class LLMConfig(BaseSettings):
     MAX_LENGTH: int
     TEMPERATURE: float
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True,
-        extra='ignore'  # Ignora variables adicionales en .env
-    )
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 def get_llm_config() -> LLMConfig:
-    """Retorna una instancia cacheada de la configuración"""
-    return LLMConfig()
+    """Retorna una instancia de la configuración"""
+    config = LLMConfig()
+    print(config.dict())
+    return config

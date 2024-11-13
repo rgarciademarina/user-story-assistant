@@ -20,6 +20,7 @@ atlassian-python-api = "^3.41.0"
 langchain-ollama = "^0.2.0"
 pydantic-settings = "^2.6.1"
 starlette = "^0.41.2"
+uvicorn = "^0.32.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

@@ -11,7 +11,7 @@ def llm_config():
         OLLAMA_BASE_URL="http://localhost:11434",
         MAX_LENGTH=2048,
         TEMPERATURE=0.7,
-        _env_file=None  # Evita que busque el archivo .env
+        _env_file=None  # Evita que busque el archivo .env en los tests
     )
 
 @pytest.fixture
