@@ -1,4 +1,3 @@
-import json
 import logging
 from langchain_ollama import OllamaLLM as Ollama
 from langchain.prompts import PromptTemplate
@@ -15,12 +14,13 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 class LLMService:
-    def __init__(self, config: LLMConfig = None):
-        self.config = config or get_llm_config()
+    def __init__(self, config: LLMConfig):
+        self.config = config
         self.llm = Ollama(
             model=self.config.MODEL_NAME,
             base_url=self.config.OLLAMA_BASE_URL,
-            temperature=self.config.TEMPERATURE
+            temperature=self.config.TEMPERATURE,
+            max_length=self.config.MAX_LENGTH
         )
         
         # Construir las cadenas de procesamiento para cada prompt
@@ -28,54 +28,13 @@ class LLMService:
         self.corner_case_chain = corner_case_prompt | self.llm
         self.testing_strategy_chain = testing_strategy_prompt | self.llm
 
-    async def analyze_user_story(self, user_story: str) -> dict:
-        """
-        Analiza una historia de usuario y proporciona recomendaciones.
-        
-        Args:
-            user_story: El texto de la historia de usuario a analizar.
-            
-        Returns:
-            dict: Diccionario con mejoras, casos esquina y estrategias de testing.
-        """
-        try:
-            refined_story = await self.llm.generate_refined_story(user_story)
-            logger.info(f"Historia Refinada: {refined_story}")
-            return {"refined_story": refined_story}
-        except Exception as e:
-            logger.error(f"Error al refinar la historia: {e}")
-            raise e
-
-    def extract_section(self, text: str, start_marker: str, end_marker: str = None) -> str:
-        """
-        Extrae una sección específica del texto entre dos marcadores.
-        
-        Args:
-            text: El texto completo del que extraer.
-            start_marker: Marca de inicio de la sección.
-            end_marker: Marca de fin de la sección. Si es None, extrae hasta el final del texto.
-        
-        Returns:
-            str: El contenido extraído entre los marcadores.
-        """
-        try:
-            start = text.index(start_marker) + len(start_marker)
-            if end_marker:
-                end = text.index(end_marker, start)
-                return text[start:end].strip()
-            else:
-                return text[start:].strip()
-        except ValueError:
-            logger.warning(f"No se pudo encontrar los marcadores {start_marker} y {end_marker} en el texto.")
-            return ""
-
     async def refine_story(self, user_story: str) -> str:
         """
         Refina una historia de usuario.
-
+    
         Args:
             user_story: Historia de usuario en formato de texto.
-
+    
         Returns:
             str: Historia de usuario refinada.
         """
@@ -91,10 +50,10 @@ class LLMService:
     async def identify_corner_cases(self, refined_story: str) -> List[str]:
         """
         Identifica casos esquina en una historia de usuario refinada.
-
+    
         Args:
             refined_story: Historia de usuario refinada en formato de texto.
-
+    
         Returns:
             List[str]: Lista de casos esquina identificados.
         """
@@ -109,12 +68,12 @@ class LLMService:
 
     async def propose_testing_strategy(self, refined_story: str, corner_cases: List[str]) -> List[str]:
         """
-        Propone estrategias de testing basadas en la historia y casos identificado.
-
+        Propone estrategias de testing basadas en la historia y casos identificados.
+    
         Args:
             refined_story: Historia de usuario refinada en formato de texto.
             corner_cases: Lista de casos esquina identificados.
-
+    
         Returns:
             List[str]: Lista de estrategias de testing propuestas.
         """
@@ -129,3 +88,31 @@ class LLMService:
         except Exception as e:
             logger.error(f"Error al proponer estrategias de testing: {e}")
             raise
+
+    def extract_section(self, response: str, start_marker: str, end_marker: str = None) -> str:
+        """
+        Extrae una sección específica del texto entre los marcadores dados.
+    
+        Args:
+            response (str): Texto completo de la respuesta.
+            start_marker (str): Marcador de inicio de la sección.
+            end_marker (str, optional): Marcador de fin de la sección. Defaults to None.
+    
+        Returns:
+            str: Texto extraído de la sección.
+        """
+        try:
+            start = response.find(start_marker)
+            if start == -1:
+                return ""
+            start += len(start_marker)
+            if end_marker:
+                end = response.find(end_marker, start)
+                if end == -1:
+                    end = len(response)
+            else:
+                end = len(response)
+            return response[start:end].strip()
+        except Exception as e:
+            logger.error(f"Error al extraer sección: {e}")
+            return ""

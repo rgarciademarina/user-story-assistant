@@ -10,13 +10,17 @@ llm_service = LLMService(get_llm_config())
 class ProposeTestingStrategyRequest(BaseModel):
     story: str = Field(
         ...,
-        example="Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
-        description="Historia de usuario refinada para la propuesta de estrategias de testing."
+        json_schema_extra={
+            "example": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
+            "description": "Historia de usuario refinada para la propuesta de estrategias de testing."
+        }
     )
     corner_cases: List[str] = Field(
         ...,
-        example=["Intentos de inicio de sesión con contraseñas incorrectas", "Acceso simultáneo desde múltiples dispositivos"],
-        description="Lista de casos esquina identificados para la historia de usuario."
+        json_schema_extra={
+            "example": ["Intentos de inicio de sesión con contraseñas incorrectas", "Acceso simultáneo desde múltiples dispositivos"],
+            "description": "Lista de casos esquina identificados para la historia de usuario."
+        }
     )
 
     class Config:
@@ -33,11 +37,13 @@ class ProposeTestingStrategyRequest(BaseModel):
 class ProposeTestingStrategyResponse(BaseModel):
     testing_strategies: List[str] = Field(
         ...,
-        example=[
-            "Pruebas de autenticación con credenciales válidas e inválidas.",
-            "Pruebas de concurrencia para verificar el manejo de múltiples sesiones."
-        ],
-        description="Lista de estrategias de testing propuestas basadas en la historia refinada y los casos esquina."
+        json_schema_extra={
+            "example": [
+                "Pruebas de autenticación con credenciales válidas e inválidas.",
+                "Pruebas de concurrencia para verificar el manejo de múltiples sesiones."
+            ],
+            "description": "Lista de estrategias de testing propuestas basadas en la historia refinada y los casos esquina."
+        }
     )
 
 @router.post(

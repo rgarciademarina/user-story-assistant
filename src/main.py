@@ -20,11 +20,11 @@ app.include_router(identify_corner_cases_router)
 app.include_router(propose_testing_strategy_router)
 
 @app.get("/")
-def read_root():
+async def read_root():
     return {"message": "Bienvenido al Asistente de Refinamiento de Historias de Usuario"}
 
 # Ruta de depuración para verificar la configuración
 @app.get("/debug/config")
-def debug_config():
+async def debug_config():
     config = get_llm_config()
-    return config.dict()
+    return config.model_dump()

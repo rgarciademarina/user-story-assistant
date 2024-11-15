@@ -17,8 +17,10 @@ class IdentifyCornerCasesRequest(BaseModel):
 class IdentifyCornerCasesResponse(BaseModel):
     corner_cases: List[str] = Field(
         ...,
-        example=["Intentos de inicio de sesión con contraseñas incorrectas", "Acceso simultáneo desde múltiples dispositivos"],
-        description="Lista de casos esquina identificados para la historia de usuario proporcionada."
+        json_schema_extra={
+            "example": ["Intentos de inicio de sesión con contraseñas incorrectas", "Acceso simultáneo desde múltiples dispositivos"],
+            "description": "Lista de casos esquina identificados para la historia de usuario proporcionada."
+        }
     )
 
     class Config:

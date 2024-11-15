@@ -9,15 +9,21 @@ llm_service = LLMService(get_llm_config())
 class RefineStoryRequest(BaseModel):
     story: str = Field(
         ...,
-        example="Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal.",
-        description="Descripción detallada de la historia de usuario que desea refinar."
+        json_schema_extra={
+            "example": "Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal.",
+            "description": "Descripción detallada de la historia de usuario que desea refinar."
+        }
+        
     )
 
 class RefineStoryResponse(BaseModel):
     refined_story: str = Field(
         ...,
-        example="Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a los servicios y funciones disponibles en mi perfil personal, como la gestión de información personal y el acceso a contenido específico.",
-        description="Historia de usuario refinada con mejoras en claridad y completitud."
+        json_schema_extra={
+            "example": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a los servicios y funciones disponibles en mi perfil personal, como la gestión de información personal y el acceso a contenido específico.",
+            "description": "Historia de usuario refinada con mejoras en claridad y completitud."
+        }
+        
     )
 
 @router.post(
