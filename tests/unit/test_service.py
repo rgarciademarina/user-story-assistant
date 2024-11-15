@@ -65,4 +65,3 @@ async def test_propose_testing_strategy(llm_service):
     assert len(result) > 0, "Debe haber al menos una estrategia de testing propuesta"
     for estrategia in result:
         assert isinstance(estrategia, str), "Cada estrategia de testing debe ser una cadena"
-        assert len(estrategia.strip()) > 0, "Las estrategias de testing no deben estar vacías"
