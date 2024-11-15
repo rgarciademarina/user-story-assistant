@@ -1,5 +1,12 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+from dotenv import load_dotenv
+import os
+
+# Verificar la ubicación del archivo .env
+env_path = os.path.abspath('.env')
+print(f"Cargando archivo .env desde: {env_path}")
+load_dotenv('.env')
 
 class LLMConfig(BaseSettings):
     """Configuración para el servicio LLM"""
@@ -8,6 +15,12 @@ class LLMConfig(BaseSettings):
     OLLAMA_BASE_URL: str
     MAX_LENGTH: int
     TEMPERATURE: float
+    API_HOST: str
+    API_PORT: int
+    ENVIRONMENT: str
+    LOG_LEVEL: str
+    DEBUG: bool
+    VECTOR_STORE_PATH: str
 
     class Config:
         env_file = ".env"
@@ -15,6 +28,13 @@ class LLMConfig(BaseSettings):
 
 def get_llm_config() -> LLMConfig:
     """Retorna una instancia de la configuración"""
-    config = LLMConfig()
-    print(config.dict())
+    try:
+        config = LLMConfig()
+        print("### Valores de configuración cargados ###")
+        for key, value in config.dict().items():
+            print(f"{key}: {value} (tipo: {type(value)})")
+        print("#########################################")
+    except Exception as e:
+        print(f"Error al cargar la configuración: {e}")
+        raise
     return config
