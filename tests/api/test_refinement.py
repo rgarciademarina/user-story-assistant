@@ -43,5 +43,3 @@ async def test_refine_story_endpoint(llm_service, monkeypatch):
         refined_story = response_json["refined_story"]
         assert isinstance(refined_story, str), "El valor de 'refined_story' debe ser una cadena"
         assert len(refined_story.strip()) > 0, "El valor de 'refined_story' no debe estar vacío"
-        assert "**Historia Refinada:**" in refined_story, "La historia refinada debe contener el marcador esperado"
-

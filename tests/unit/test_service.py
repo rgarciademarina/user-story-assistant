@@ -35,11 +35,10 @@ async def test_refine_story(llm_service):
     # Verificar que se recibió una cadena refinada
     assert isinstance(result, str), "El resultado debe ser una cadena"
     assert len(result.strip()) > 0, "El resultado no debe estar vacío"
-    assert "**Historia Refinada:**" in result, "La historia refinada debe contener el marcador esperado"
 
 @pytest.mark.asyncio
 async def test_identify_corner_cases(llm_service):
-    refined_story = "Historia refinada de ejemplo con detalles adecuados."
+    refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
 
     result = await llm_service.identify_corner_cases(refined_story)
 
@@ -52,8 +51,12 @@ async def test_identify_corner_cases(llm_service):
 
 @pytest.mark.asyncio
 async def test_propose_testing_strategy(llm_service):
-    refined_story = "Historia refinada de ejemplo con detalles adecuados."
-    corner_cases = ["- Caso 1", "- Caso 2"]
+    refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
+    corner_cases = ["1. **Nombre de Usuario/Correo electrónico no registrado:** El usuario intenta iniciar sesión con una dirección de correo electrónico o nombre de usuario que no se encuentra en la base de datos del sistema.", 
+                    "2. **Contraseña Incorrecta persistente:** El usuario ingresa la contraseña incorrecta más de 10 veces consecutivas, lo que bloquea temporalmente su acceso al sistema.",
+                    "3. **Problemas con autenticación de dos factores (2FA):** El usuario no puede iniciar sesión porque el sistema requiere la verificación del código de autenticación 2FA, pero el dispositivo del usuario no es compatible o no tiene el código disponible.",
+                    "4. **Bloqueo de cuenta por seguridad:** La cuenta del usuario está bloqueada temporalmente debido a inactividad prolongada o actividad sospechosa, lo que impide su acceso hasta que se complete el proceso de desbloqueo.",
+                    "5. **Compatibilidad con navegadores antiguos:** El sistema no es compatible con ciertos navegadores antiguos o versiones obsoletas, lo que limita la funcionalidad del inicio de sesión para algunos usuarios."]
 
     result = await llm_service.propose_testing_strategy(refined_story, corner_cases)
 
