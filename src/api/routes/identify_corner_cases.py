@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List
 from src.llm.service import LLMService
 from src.llm.config import get_llm_config
+from pydantic import ConfigDict
 
 router = APIRouter()
 llm_service = LLMService(get_llm_config())
@@ -10,28 +11,34 @@ llm_service = LLMService(get_llm_config())
 class IdentifyCornerCasesRequest(BaseModel):
     story: str = Field(
         ...,
-        example="Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
-        description="Historia de usuario refinada para identificar casos esquina."
+        json_schema_extra={
+            "example": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
+            "description": "Historia de usuario refinada para identificar casos esquina."
+        }
     )
 
 class IdentifyCornerCasesResponse(BaseModel):
     corner_cases: List[str] = Field(
         ...,
         json_schema_extra={
-            "example": ["Intentos de inicio de sesión con contraseñas incorrectas", "Acceso simultáneo desde múltiples dispositivos"],
+            "example": [
+                "Intentos de inicio de sesión con contraseñas incorrectas.",
+                "Acceso simultáneo desde múltiples dispositivos."
+            ],
             "description": "Lista de casos esquina identificados para la historia de usuario proporcionada."
         }
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "corner_cases": [
-                    "Intentos de inicio de sesión con contraseñas incorrectas",
-                    "Acceso simultáneo desde múltiples dispositivos"
+                    "Intentos de inicio de sesión con contraseñas incorrectas.",
+                    "Acceso simultáneo desde múltiples dispositivos."
                 ]
             }
         }
+    )
 
 @router.post(
     "/identify_corner_cases",

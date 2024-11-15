@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 from src.llm.service import LLMService
 from src.llm.config import get_llm_config
@@ -18,13 +18,16 @@ class ProposeTestingStrategyRequest(BaseModel):
     corner_cases: List[str] = Field(
         ...,
         json_schema_extra={
-            "example": ["Intentos de inicio de sesión con contraseñas incorrectas", "Acceso simultáneo desde múltiples dispositivos"],
+            "example": [
+                "Intentos de inicio de sesión con contraseñas incorrectas",
+                "Acceso simultáneo desde múltiples dispositivos"
+            ],
             "description": "Lista de casos esquina identificados para la historia de usuario."
         }
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "story": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
                 "corner_cases": [
@@ -33,6 +36,7 @@ class ProposeTestingStrategyRequest(BaseModel):
                 ]
             }
         }
+    )
 
 class ProposeTestingStrategyResponse(BaseModel):
     testing_strategies: List[str] = Field(
@@ -43,6 +47,17 @@ class ProposeTestingStrategyResponse(BaseModel):
                 "Pruebas de concurrencia para verificar el manejo de múltiples sesiones."
             ],
             "description": "Lista de estrategias de testing propuestas basadas en la historia refinada y los casos esquina."
+        }
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "testing_strategies": [
+                    "Pruebas de autenticación con credenciales válidas e inválidas.",
+                    "Pruebas de concurrencia para verificar el manejo de múltiples sesiones."
+                ]
+            }
         }
     )
 
