@@ -523,23 +523,69 @@ Para US-007: Ejecutar Paso de Refinamiento
 
 **Pull Request 2**
 
-- **Título:** Integración con Jira Local
-- **Descripción:** Implementa el conector para Jira local usando la biblioteca `atlassian-python-api`.
-- **Cambios Principales:**
-  - Añadidos archivos en `src/integrations/jira/`
-  - Configuración de clientes Jira en `src/integrations/jira/client.py`
-  - Tests de integración para el conector Jira
-- **Estado:** Mergeado
-
-**Pull Request 3**
-
 - **Título:** Desarrollo de la Interfaz Gráfica con LangFlow
 - **Descripción:** Crea la interfaz gráfica básica utilizando LangFlow para la interacción con el asistente de refinamiento.
 - **Cambios Principales:**
   - Añadidos archivos en `src/ui/`
   - Configuración de LangFlow en `src/ui/app.py`
   - Documentación de uso de la interfaz gráfica
-- **Estado:** Mergeado
+- **Estado:** Pendiente
+
+**Pull Request 3**
+
+- **Título:** Integración con Jira Local
+- **Descripción:** Implementa el conector para Jira local usando la biblioteca `atlassian-python-api`.
+- **Cambios Principales:**
+  - Añadidos archivos en `src/integrations/jira/`
+  - Configuración de clientes Jira en `src/integrations/jira/client.py`
+  - Tests de integración para el conector Jira
+- **Estado:** Pendiente
+
+## Interfaz Gráfica con LangFlow
+
+### Instalación
+
+1. **Navega al directorio del frontend:**
+    ```bash
+    cd src/ui
+    ```
+
+2. **Instala las dependencias:**
+    ```bash
+    npm install
+    # o si usas Yarn
+    yarn install
+    ```
+
+3. **Ejecuta la aplicación:**
+    ```bash
+    npm run serve
+    # o si usas Yarn
+    yarn serve
+    ```
+
+### Uso
+
+1. **Accede a la interfaz gráfica:**
+   Abre tu navegador y ve a `http://localhost:8080` (o el puerto que hayas configurado).
+
+2. **Proceso de Refinamiento:**
+   - **Paso 1: Mejora de Definición**
+     - Ingresa una historia de usuario en el formulario.
+     - Visualiza la historia refinada y confirma para avanzar.
+   - **Paso 2: Identificación de Casos Esquinas**
+     - Revisa los casos esquinas identificados.
+     - Confirma para avanzar.
+   - **Paso 3: Estrategia de Testing**
+     - Revisa las estrategias de testing recomendadas.
+     - Confirma para finalizar el proceso.
+
+### Capturas de Pantalla
+
+![Interfaz de Refinamiento Paso 1](ruta/a/tu/captura_paso1.png)
+![Interfaz de Refinamiento Paso 2](ruta/a/tu/captura_paso2.png)
+![Interfaz de Refinamiento Paso 3](ruta/a/tu/captura_paso3.png)
+
 ```
 
 ---
