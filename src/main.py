@@ -15,9 +15,9 @@ app = FastAPI(
 llm_service = LLMService(config=get_llm_config())
 
 # Incluir los routers separados
-app.include_router(refine_story_router)
-app.include_router(identify_corner_cases_router)
-app.include_router(propose_testing_strategy_router)
+app.include_router(refine_story_router, prefix='/api')
+app.include_router(identify_corner_cases_router, prefix='/api')
+app.include_router(propose_testing_strategy_router, prefix='/api')
 
 @app.get("/")
 async def read_root():

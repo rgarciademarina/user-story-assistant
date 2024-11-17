@@ -20,7 +20,7 @@ async def test_propose_testing_strategy_endpoint(llm_service):
         'feedback': 'Incluir pruebas de rendimiento bajo carga y pruebas de seguridad para prevenir ataques de fuerza bruta'
     }
     
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test/api") as client:
         response = await client.post("/propose_testing_strategy", json=payload)
         assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
         
