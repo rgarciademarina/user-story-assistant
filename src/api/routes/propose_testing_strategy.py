@@ -25,6 +25,13 @@ class ProposeTestingStrategyRequest(BaseModel):
             "description": "Lista de casos esquina identificados para la historia de usuario."
         }
     )
+    feedback: str | None = Field(
+        None,
+        json_schema_extra={
+            "example": "Incluir pruebas de rendimiento y seguridad en la estrategia de testing.",
+            "description": "Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente."
+        }
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -33,7 +40,8 @@ class ProposeTestingStrategyRequest(BaseModel):
                 "corner_cases": [
                     "Intentos de inicio de sesión con contraseñas incorrectas",
                     "Acceso simultáneo desde múltiples dispositivos"
-                ]
+                ],
+                "feedback": "Incluir pruebas de rendimiento y seguridad en la estrategia de testing."
             }
         }
     )
@@ -73,10 +81,11 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
 
     - **story**: Historia de usuario refinada en formato de texto.
     - **corner_cases**: Lista de casos esquina identificados.
+    - **feedback**: Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente.
     """
     try:
         testing_strategies = await llm_service.propose_testing_strategy(
-            request.story, request.corner_cases
+            request.story, request.corner_cases, request.feedback
         )
         return {"testing_strategies": testing_strategies}
     except Exception as e:
