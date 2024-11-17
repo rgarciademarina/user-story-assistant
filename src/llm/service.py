@@ -30,27 +30,27 @@ class LLMService:
         self.sessions: Dict[UUID, SessionState] = {}
         self.memories: Dict[UUID, ChatMessageHistory] = {}
         
-        # Crear prompts
-        self.refinement_prompt = PromptTemplate.from_template(config.REFINEMENT_PROMPT_TEMPLATE)
-        self.corner_case_prompt = PromptTemplate.from_template(config.CORNER_CASE_PROMPT_TEMPLATE)
-        self.testing_strategy_prompt = PromptTemplate.from_template(config.TESTING_STRATEGY_PROMPT_TEMPLATE)
+        # Usar los prompts importados directamente
+        self.refinement_prompt = refinement_prompt
+        self.corner_case_prompt = corner_case_prompt
+        self.testing_strategy_prompt = testing_strategy_prompt
         
         # Crear secuencias ejecutables
         self.refinement_chain = (
             RunnablePassthrough() | 
-            PromptTemplate.from_template(config.REFINEMENT_PROMPT_TEMPLATE) | 
+            self.refinement_prompt | 
             self.llm
         )
         
         self.corner_case_chain = (
             RunnablePassthrough() | 
-            PromptTemplate.from_template(config.CORNER_CASE_PROMPT_TEMPLATE) | 
+            self.corner_case_prompt | 
             self.llm
         )
         
         self.testing_strategy_chain = (
             RunnablePassthrough() | 
-            PromptTemplate.from_template(config.TESTING_STRATEGY_PROMPT_TEMPLATE) | 
+            self.testing_strategy_prompt | 
             self.llm
         )
 
