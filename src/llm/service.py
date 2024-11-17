@@ -93,6 +93,13 @@ class LLMService:
             session.refined_story = refined_story
             session.current_state = ProcessState.CORNER_CASES
             
+            # Guardar la interacción en el historial
+            await self._add_to_memory(
+                session_id,
+                f"Historia original: {user_story}\nFeedback: {feedback}",
+                f"Historia refinada: {refined_story}"
+            )
+            
             return refined_story
         except Exception as e:
             logger.error(f"Error al refinar la historia: {e}")
@@ -115,6 +122,16 @@ class LLMService:
             session.corner_cases = corner_cases
             session.current_state = ProcessState.TESTING_STRATEGY
             
+            # Construir la cadena fuera de la f-string
+            corner_cases_formatted = '\n'.join(corner_cases)
+            
+            # Guardar la interacción en el historial
+            await self._add_to_memory(
+                session_id,
+                f"Historia refinada: {refined_story}\nFeedback: {feedback}",
+                f"Casos esquina identificados:\n{corner_cases_formatted}"
+            )
+            
             return corner_cases
         except Exception as e:
             logger.error(f"Error al identificar casos esquina: {e}")
@@ -136,6 +153,17 @@ class LLMService:
             strategies = [strategy.strip() for strategy in strategies_text.split('\n') if strategy.strip()]
             
             session.current_state = ProcessState.COMPLETED
+            
+            # Construir las cadenas fuera de las f-strings
+            corner_cases_formatted = ', '.join(corner_cases)
+            strategies_formatted = '\n'.join(strategies)
+            
+            # Guardar la interacción en el historial
+            await self._add_to_memory(
+                session_id,
+                f"Historia refinada: {refined_story}\nCasos esquina: {corner_cases_formatted}\nFeedback: {feedback}",
+                f"Estrategias de testing propuestas:\n{strategies_formatted}"
+            )
             
             return strategies
         except Exception as e:
