@@ -1,14 +1,20 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 from src.llm.service import LLMService
 from src.llm.config import get_llm_config
-from pydantic import ConfigDict
+from uuid import UUID
 
 router = APIRouter()
 llm_service = LLMService(get_llm_config())
 
 class IdentifyCornerCasesRequest(BaseModel):
+    session_id: UUID | None = Field(
+        None,
+        json_schema_extra={
+            "description": "ID de sesión para mantener el contexto de la conversación. Si no se proporciona, se creará una nueva sesión."
+        }
+    )
     story: str = Field(
         ...,
         json_schema_extra={
@@ -34,6 +40,12 @@ class IdentifyCornerCasesRequest(BaseModel):
     )
 
 class IdentifyCornerCasesResponse(BaseModel):
+    session_id: UUID = Field(
+        ...,
+        json_schema_extra={
+            "description": "ID de sesión para usar en futuras peticiones."
+        }
+    )
     corner_cases: List[str] = Field(
         ...,
         json_schema_extra={
@@ -66,11 +78,24 @@ async def identify_corner_cases(request: IdentifyCornerCasesRequest):
     """
     Identificar posibles escenarios límite o riesgos en una historia de usuario refinada.
 
+    - **session_id**: ID de sesión opcional. Si no se proporciona, se creará una nueva sesión.
     - **story**: Historia de usuario refinada en formato de texto.
     - **feedback**: Feedback opcional del usuario sobre los casos esquina identificados anteriormente.
     """
     try:
-        corner_cases = await llm_service.identify_corner_cases(request.story, request.feedback)
-        return {"corner_cases": corner_cases}
+        # Si no hay session_id, crear una nueva sesión
+        session_id = request.session_id or llm_service.create_session()
+        
+        # Identificar casos esquina usando el servicio LLM
+        corner_cases = await llm_service.identify_corner_cases(
+            session_id=session_id,
+            refined_story=request.story,
+            feedback=request.feedback
+        )
+        
+        return {
+            "session_id": session_id,
+            "corner_cases": corner_cases
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
