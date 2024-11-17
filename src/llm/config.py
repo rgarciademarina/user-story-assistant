@@ -1,6 +1,5 @@
 from typing import Optional
 from pydantic import BaseModel, Field
-from langchain_community.chat_models import ChatOpenAI
 from dotenv import load_dotenv
 import os
 
@@ -47,9 +46,10 @@ class LLMConfig(BaseModel):
         Historia de chat previa: {chat_history}
     """)
 
-    class Config:
-        allow_population_by_field_name = True
-        alias_generator = lambda x: x.lower()
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": lambda x: x.lower()
+    }
 
 def get_llm_config() -> LLMConfig:
     """Obtiene la configuración del LLM"""

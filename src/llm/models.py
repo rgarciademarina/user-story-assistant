@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from enum import Enum
 from typing import Optional, Dict, List
 from uuid import UUID
@@ -10,8 +10,14 @@ class ProcessState(Enum):
     COMPLETED = "completed"
 
 class SessionState(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        extra='forbid'
+    )
+    
     session_id: UUID
     current_state: ProcessState
-    refined_story: Optional[str] = None
-    corner_cases: Optional[list[str]] = None
+    refined_story: str | None = None
+    corner_cases: list[str] | None = None
     testing_strategies: Optional[list[str]] = None

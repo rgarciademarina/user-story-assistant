@@ -2,11 +2,10 @@ import logging
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain.schema.messages import HumanMessage, AIMessage
 from langchain.prompts import PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough, RunnableSequence
+from langchain.schema.runnable import RunnablePassthrough
 from src.config.llm_config import LLMConfig
-from typing import List, Dict, Optional
+from typing import List, Dict
 from uuid import uuid4, UUID
-from langchain_community.llms import Ollama
 from langchain_ollama import OllamaLLM
 from .models import SessionState, ProcessState
 from langchain.chains import LLMChain
