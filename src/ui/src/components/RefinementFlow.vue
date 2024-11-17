@@ -67,20 +67,33 @@
     },
     methods: {
       ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'resetProcess']),
-      async handleRefineStory({ story, feedback }) {
-        console.log('handleRefineStory called with:', { story, feedback });
-        this.$store.commit('setStory', story);
-        await this.refineStory({ story, feedback });
+      async handleRefineStory(payload) {
+        console.trace('handleRefineStory called with:', payload);
+        if (!payload || !payload.story) {
+          console.warn('handleRefineStory: Invalid payload received');
+          return;
+        }
+        console.log('handleRefineStory called with:', payload);
+        await this.refineStory(payload);
       },
       async handleRefineFeedback(feedback) {
-        await this.refineStory(feedback);
+        console.log('handleRefineFeedback - feedback:', feedback);
+        const story = this.$store.state.refinedStory;
+        console.log('handleRefineFeedback - story:', story);
+        if (!story) {
+            console.warn('No hay historia refinada disponible para enviar feedback');
+            return;
+        }
+        await this.refineStory({ story, feedback });
       },
       proceedToCornerCases() {
         this.currentStep = 'cornerCases';
         this.identifyCornerCases('');
       },
       async handleCornerCasesFeedback(feedback) {
-        await this.identifyCornerCases(feedback);
+        console.log('handleCornerCasesFeedback - feedback:', feedback);
+        const refinedStory = this.$store.state.refinedStory;
+        await this.identifyCornerCases({ refinedStory, feedback });
       },
       proceedToTestingStrategy() {
         this.currentStep = 'testingStrategy';
@@ -99,7 +112,7 @@
         this.currentStep = 'cornerCases';
       },
       resetProcess() {
-        this.resetProcess();
+        this.$store.dispatch('resetProcess');  // Llamar a la acción del store
         this.currentStep = 'refineStory';
       },
     },

@@ -61,14 +61,22 @@ export default createStore({
         }
       }
     },
-    async identifyCornerCases({ commit, state }, feedback) {
-      const payload = {
-        session_id: state.sessionId,
-        story: state.refinedStory,
-        feedback: feedback,
-      };
+    async identifyCornerCases({ commit, state }, payload) {
+      console.log('identifyCornerCases called with payload:', payload);
+      if (!payload || !payload.refinedStory) {
+        console.warn('The "refinedStory" field is missing in the payload. Aborting action.');
+        return;
+      }
+      const { refinedStory, feedback } = payload;
+      const requestData = { story: refinedStory };
+      if (feedback) {
+        requestData.feedback = feedback;
+      }
+      if (state.sessionId) {
+        requestData.session_id = state.sessionId;
+      }
       try {
-        const response = await axios.post('/api/identify_corner_cases', payload);
+        const response = await axios.post('/api/identify_corner_cases', requestData);
         commit('setCornerCases', response.data.corner_cases);
       } catch (error) {
         console.error('Error identifying corner cases:', error);
