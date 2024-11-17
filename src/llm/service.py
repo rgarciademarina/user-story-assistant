@@ -28,18 +28,23 @@ class LLMService:
         self.corner_case_chain = corner_case_prompt | self.llm
         self.testing_strategy_chain = testing_strategy_prompt | self.llm
 
-    async def refine_story(self, user_story: str) -> str:
+    async def refine_story(self, user_story: str, feedback: str | None = None) -> str:
         """
         Refina una historia de usuario.
     
         Args:
             user_story: Historia de usuario en formato de texto.
+            feedback: Feedback opcional del usuario sobre la historia refinada anterior.
     
         Returns:
             str: Historia de usuario refinada.
         """
         try:
-            refined_response = await self.refinement_chain.ainvoke({"user_story": user_story})
+            refined_response = await self.refinement_chain.ainvoke({
+                "user_story": user_story,
+                "feedback": feedback if feedback else "No hay feedback proporcionado."
+            })
+            
             refined_story = self.extract_section(refined_response, "**Historia Refinada:**")
             logger.info(f"Historia Refinada: {refined_story}")
             return refined_story
@@ -47,18 +52,22 @@ class LLMService:
             logger.error(f"Error al refinar la historia: {e}")
             raise
 
-    async def identify_corner_cases(self, refined_story: str) -> List[str]:
+    async def identify_corner_cases(self, refined_story: str, feedback: str | None = None) -> List[str]:
         """
         Identifica casos esquina en una historia de usuario refinada.
     
         Args:
             refined_story: Historia de usuario refinada en formato de texto.
+            feedback: Feedback opcional del usuario sobre los casos esquina identificados anteriormente.
     
         Returns:
             List[str]: Lista de casos esquina identificados.
         """
         try:
-            corner_case_response = await self.corner_case_chain.ainvoke({"refined_user_story": refined_story})
+            corner_case_response = await self.corner_case_chain.ainvoke({
+                "refined_user_story": refined_story,
+                "feedback": feedback if feedback else "No hay feedback proporcionado."
+            })
             corner_cases = self.extract_section(corner_case_response, "**Casos Esquina:**")
             logger.info(f"Casos Esquina: {corner_cases}")
             return corner_cases.split('\n')  # Asumiendo que cada caso está en una nueva línea
@@ -66,13 +75,14 @@ class LLMService:
             logger.error(f"Error al identificar casos esquina: {e}")
             raise
 
-    async def propose_testing_strategy(self, refined_story: str, corner_cases: List[str]) -> List[str]:
+    async def propose_testing_strategy(self, refined_story: str, corner_cases: List[str], feedback: str | None = None) -> List[str]:
         """
         Propone estrategias de testing basadas en la historia y casos identificados.
     
         Args:
             refined_story: Historia de usuario refinada en formato de texto.
             corner_cases: Lista de casos esquina identificados.
+            feedback: Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente.
     
         Returns:
             List[str]: Lista de estrategias de testing propuestas.
@@ -80,11 +90,12 @@ class LLMService:
         try:
             testing_strategy_response = await self.testing_strategy_chain.ainvoke({
                 "refined_user_story": refined_story,
-                "corner_cases": corner_cases
+                "corner_cases": "\n".join(corner_cases),
+                "feedback": feedback if feedback else "No hay feedback proporcionado."
             })
             testing_strategies = self.extract_section(testing_strategy_response, "**Estrategia de Testing:**", "**Fin de Estrategia**")
             logger.info(f"Estrategia de Testing: {testing_strategies}")
-            return testing_strategies.split('\n')  # Asumiendo que cada estrategia está en una nueva línea
+            return testing_strategies.split('\n')
         except Exception as e:
             logger.error(f"Error al proponer estrategias de testing: {e}")
             raise
