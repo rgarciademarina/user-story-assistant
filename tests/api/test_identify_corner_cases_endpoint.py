@@ -12,7 +12,7 @@ async def test_identify_corner_cases_endpoint(llm_service):
         'feedback': 'Considerar también casos de autenticación de dos factores y bloqueos de cuenta por inactividad'
     }
     
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test/api") as client:
         response = await client.post("/identify_corner_cases", json=payload)
         assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
         

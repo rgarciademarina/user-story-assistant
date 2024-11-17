@@ -9,7 +9,7 @@ def anyio_backend():
 @pytest.mark.asyncio
 async def test_refine_story_endpoint(llm_service):
     """Test para el endpoint de refinamiento de historias de usuario con feedback"""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test/api") as client:
         payload = {
             'story': 'Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal',
             'feedback': 'La historia debería especificar el método de autenticación y los datos a los que se accederá'
