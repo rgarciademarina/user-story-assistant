@@ -1,8 +1,14 @@
 import logging
-from langchain_ollama import OllamaLLM as Ollama
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain.schema.messages import HumanMessage, AIMessage
 from langchain.prompts import PromptTemplate
-from .config import LLMConfig, get_llm_config
-from typing import List
+from langchain.schema.runnable import RunnablePassthrough
+from src.config.llm_config import LLMConfig
+from typing import List, Dict
+from uuid import uuid4, UUID
+from langchain_ollama import OllamaLLM
+from .models import SessionState, ProcessState
+from langchain.chains import LLMChain
 
 # Importar las plantillas de prompts
 from .prompts.refinement import refinement_prompt
@@ -15,115 +21,156 @@ logging.basicConfig(level=logging.INFO)
 
 class LLMService:
     def __init__(self, config: LLMConfig):
-        self.config = config
-        self.llm = Ollama(
-            model=self.config.MODEL_NAME,
-            base_url=self.config.OLLAMA_BASE_URL,
-            temperature=self.config.TEMPERATURE,
-            max_length=self.config.MAX_LENGTH
+        # Crear el modelo LLM basado en la configuración
+        self.llm = OllamaLLM(
+            model=config.MODEL_NAME,
+            base_url=config.OLLAMA_BASE_URL,
+            temperature=config.TEMPERATURE
+        )
+        self.sessions: Dict[UUID, SessionState] = {}
+        self.memories: Dict[UUID, ChatMessageHistory] = {}
+        
+        # Usar los prompts importados directamente
+        self.refinement_prompt = refinement_prompt
+        self.corner_case_prompt = corner_case_prompt
+        self.testing_strategy_prompt = testing_strategy_prompt
+        
+        # Crear secuencias ejecutables
+        self.refinement_chain = (
+            RunnablePassthrough() | 
+            self.refinement_prompt | 
+            self.llm
         )
         
-        # Construir las cadenas de procesamiento para cada prompt
-        self.refinement_chain = refinement_prompt | self.llm
-        self.corner_case_chain = corner_case_prompt | self.llm
-        self.testing_strategy_chain = testing_strategy_prompt | self.llm
+        self.corner_case_chain = (
+            RunnablePassthrough() | 
+            self.corner_case_prompt | 
+            self.llm
+        )
+        
+        self.testing_strategy_chain = (
+            RunnablePassthrough() | 
+            self.testing_strategy_prompt | 
+            self.llm
+        )
 
-    async def refine_story(self, user_story: str, feedback: str | None = None) -> str:
-        """
-        Refina una historia de usuario.
-    
-        Args:
-            user_story: Historia de usuario en formato de texto.
-            feedback: Feedback opcional del usuario sobre la historia refinada anterior.
-    
-        Returns:
-            str: Historia de usuario refinada.
-        """
+    def create_session(self) -> UUID:
+        session_id = uuid4()
+        self.sessions[session_id] = SessionState(
+            session_id=session_id,
+            current_state=ProcessState.REFINEMENT
+        )
+        self.memories[session_id] = ChatMessageHistory()
+        return session_id
+
+    def extract_section(self, text: str, start_marker: str) -> str:
         try:
-            refined_response = await self.refinement_chain.ainvoke({
+            if not isinstance(text, str):
+                return str(text)
+                
+            start_idx = text.find(start_marker)
+            if start_idx == -1:
+                return text
+            
+            content_start = start_idx + len(start_marker)
+            return text[content_start:].strip()
+        except Exception as e:
+            logger.error(f"Error al extraer sección: {e}")
+            return str(text)
+
+    async def refine_story(self, session_id: UUID, user_story: str, feedback: str | None = None) -> str:
+        memory = self.memories[session_id]
+        session = self.sessions[session_id]
+        
+        try:
+            response = await self.refinement_chain.ainvoke({
                 "user_story": user_story,
-                "feedback": feedback if feedback else "No hay feedback proporcionado."
+                "feedback": feedback if feedback else "No hay feedback proporcionado.",
+                "chat_history": memory.messages
             })
             
-            refined_story = self.extract_section(refined_response, "**Historia Refinada:**")
-            logger.info(f"Historia Refinada: {refined_story}")
+            refined_story = self.extract_section(response, "**Historia Refinada:**")
+            session.refined_story = refined_story
+            session.current_state = ProcessState.CORNER_CASES
+            
+            # Guardar la interacción en el historial
+            await self._add_to_memory(
+                session_id,
+                f"Historia original: {user_story}\nFeedback: {feedback}",
+                f"Historia refinada: {refined_story}"
+            )
+            
             return refined_story
         except Exception as e:
             logger.error(f"Error al refinar la historia: {e}")
             raise
 
-    async def identify_corner_cases(self, refined_story: str, feedback: str | None = None) -> List[str]:
-        """
-        Identifica casos esquina en una historia de usuario refinada.
-    
-        Args:
-            refined_story: Historia de usuario refinada en formato de texto.
-            feedback: Feedback opcional del usuario sobre los casos esquina identificados anteriormente.
-    
-        Returns:
-            List[str]: Lista de casos esquina identificados.
-        """
+    async def identify_corner_cases(self, session_id: UUID, refined_story: str, feedback: str | None = None) -> List[str]:
+        memory = self.memories[session_id]
+        session = self.sessions[session_id]
+        
         try:
-            corner_case_response = await self.corner_case_chain.ainvoke({
+            response = await self.corner_case_chain.ainvoke({
                 "refined_user_story": refined_story,
-                "feedback": feedback if feedback else "No hay feedback proporcionado."
+                "feedback": feedback if feedback else "No hay feedback proporcionado.",
+                "chat_history": memory.messages
             })
-            corner_cases = self.extract_section(corner_case_response, "**Casos Esquina:**")
-            logger.info(f"Casos Esquina: {corner_cases}")
-            return corner_cases.split('\n')  # Asumiendo que cada caso está en una nueva línea
+            
+            corner_cases_text = self.extract_section(response, "**Casos Esquina:**")
+            corner_cases = [caso.strip() for caso in corner_cases_text.split('\n') if caso.strip()]
+            
+            session.corner_cases = corner_cases
+            session.current_state = ProcessState.TESTING_STRATEGY
+            
+            # Construir la cadena fuera de la f-string
+            corner_cases_formatted = '\n'.join(corner_cases)
+            
+            # Guardar la interacción en el historial
+            await self._add_to_memory(
+                session_id,
+                f"Historia refinada: {refined_story}\nFeedback: {feedback}",
+                f"Casos esquina identificados:\n{corner_cases_formatted}"
+            )
+            
+            return corner_cases
         except Exception as e:
             logger.error(f"Error al identificar casos esquina: {e}")
             raise
 
-    async def propose_testing_strategy(self, refined_story: str, corner_cases: List[str], feedback: str | None = None) -> List[str]:
-        """
-        Propone estrategias de testing basadas en la historia y casos identificados.
-    
-        Args:
-            refined_story: Historia de usuario refinada en formato de texto.
-            corner_cases: Lista de casos esquina identificados.
-            feedback: Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente.
-    
-        Returns:
-            List[str]: Lista de estrategias de testing propuestas.
-        """
+    async def propose_testing_strategy(self, session_id: UUID, refined_story: str, corner_cases: List[str], feedback: str | None = None) -> List[str]:
+        memory = self.memories[session_id]
+        session = self.sessions[session_id]
+        
         try:
-            testing_strategy_response = await self.testing_strategy_chain.ainvoke({
+            response = await self.testing_strategy_chain.ainvoke({
                 "refined_user_story": refined_story,
                 "corner_cases": "\n".join(corner_cases),
-                "feedback": feedback if feedback else "No hay feedback proporcionado."
+                "feedback": feedback if feedback else "No hay feedback proporcionado.",
+                "chat_history": memory.messages
             })
-            testing_strategies = self.extract_section(testing_strategy_response, "**Estrategia de Testing:**", "**Fin de Estrategia**")
-            logger.info(f"Estrategia de Testing: {testing_strategies}")
-            return testing_strategies.split('\n')
+            
+            strategies_text = self.extract_section(response, "**Estrategias de Testing:**")
+            strategies = [strategy.strip() for strategy in strategies_text.split('\n') if strategy.strip()]
+            
+            session.current_state = ProcessState.COMPLETED
+            
+            # Construir las cadenas fuera de las f-strings
+            corner_cases_formatted = ', '.join(corner_cases)
+            strategies_formatted = '\n'.join(strategies)
+            
+            # Guardar la interacción en el historial
+            await self._add_to_memory(
+                session_id,
+                f"Historia refinada: {refined_story}\nCasos esquina: {corner_cases_formatted}\nFeedback: {feedback}",
+                f"Estrategias de testing propuestas:\n{strategies_formatted}"
+            )
+            
+            return strategies
         except Exception as e:
             logger.error(f"Error al proponer estrategias de testing: {e}")
             raise
 
-    def extract_section(self, response: str, start_marker: str, end_marker: str = None) -> str:
-        """
-        Extrae una sección específica del texto entre los marcadores dados.
-    
-        Args:
-            response (str): Texto completo de la respuesta.
-            start_marker (str): Marcador de inicio de la sección.
-            end_marker (str, optional): Marcador de fin de la sección. Defaults to None.
-    
-        Returns:
-            str: Texto extraído de la sección.
-        """
-        try:
-            start = response.find(start_marker)
-            if start == -1:
-                return ""
-            start += len(start_marker)
-            if end_marker:
-                end = response.find(end_marker, start)
-                if end == -1:
-                    end = len(response)
-            else:
-                end = len(response)
-            return response[start:end].strip()
-        except Exception as e:
-            logger.error(f"Error al extraer sección: {e}")
-            return ""
+    async def _add_to_memory(self, session_id: UUID, human_message: str, ai_message: str):
+        history = self.memories[session_id]
+        history.add_message(HumanMessage(content=human_message))
+        history.add_message(AIMessage(content=ai_message))

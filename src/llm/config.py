@@ -1,35 +1,32 @@
-from pydantic_settings import BaseSettings
 from typing import Optional
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import os
 
 load_dotenv('.env')
 
-class LLMConfig(BaseSettings):
+class LLMConfig(BaseModel):
     """Configuración para el servicio LLM"""
-    MODEL_NAME: str
-    MODEL_TYPE: str
-    OLLAMA_BASE_URL: str
-    MAX_LENGTH: int
-    TEMPERATURE: float
-    API_HOST: str
-    API_PORT: int
-    ENVIRONMENT: str
-    LOG_LEVEL: str
-    DEBUG: bool
-    VECTOR_STORE_PATH: str
-
-    # Uso de ConfigDict para Pydantic 2
+    MODEL_NAME: str = Field(default="llama3.2-vision")
+    MODEL_TYPE: str = Field(default="ollama")
+    OLLAMA_BASE_URL: str = Field(default="http://localhost:11434")
+    MAX_LENGTH: int = Field(default=2048)
+    TEMPERATURE: float = Field(default=0.7)
+    API_HOST: str = Field(default="0.0.0.0")
+    API_PORT: int = Field(default=8000)
+    ENVIRONMENT: str = Field(default="development")
+    LOG_LEVEL: str = Field(default="INFO")
+    DEBUG: bool = Field(default=False)
+    VECTOR_STORE_PATH: str = Field(default="./data/vector_store")
     model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
+        "populate_by_name": True,
+        "alias_generator": lambda x: x.lower()
     }
 
 def get_llm_config() -> LLMConfig:
-    """Retorna una instancia de la configuración"""
+    """Obtiene la configuración del LLM"""
     try:
-        config = LLMConfig()
+        return LLMConfig()
     except Exception as e:
         print(f"Error al cargar la configuración: {e}")
         raise
-    return config

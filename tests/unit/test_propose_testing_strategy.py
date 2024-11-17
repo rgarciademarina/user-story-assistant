@@ -3,6 +3,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_propose_testing_strategy_without_feedback(llm_service):
     """Test para proponer estrategias de testing sin feedback"""
+    session_id = llm_service.create_session()
     refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
     corner_cases = [
         "1. **Nombre de Usuario/Correo electrónico no registrado:** El usuario intenta iniciar sesión con una dirección de correo electrónico o nombre de usuario que no se encuentra en la base de datos del sistema.",
@@ -10,7 +11,11 @@ async def test_propose_testing_strategy_without_feedback(llm_service):
         "3. **Problemas con autenticación de dos factores (2FA):** El usuario no puede iniciar sesión porque el sistema requiere la verificación del código de autenticación 2FA."
     ]
 
-    result = await llm_service.propose_testing_strategy(refined_story, corner_cases)
+    result = await llm_service.propose_testing_strategy(
+        session_id=session_id,
+        refined_story=refined_story,
+        corner_cases=corner_cases
+    )
 
     # Verificar que se recibe una lista de estrategias de testing
     assert isinstance(result, list), "El resultado debe ser una lista"
@@ -23,6 +28,7 @@ async def test_propose_testing_strategy_without_feedback(llm_service):
 @pytest.mark.asyncio
 async def test_propose_testing_strategy_with_feedback(llm_service):
     """Test para proponer estrategias de testing con feedback"""
+    session_id = llm_service.create_session()
     refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
     corner_cases = [
         "1. **Nombre de Usuario/Correo electrónico no registrado:** El usuario intenta iniciar sesión con una dirección de correo electrónico o nombre de usuario que no se encuentra en la base de datos del sistema.",
@@ -30,7 +36,12 @@ async def test_propose_testing_strategy_with_feedback(llm_service):
     ]
     feedback = "Incluir pruebas de rendimiento bajo carga y pruebas de seguridad para prevenir ataques de fuerza bruta"
 
-    result = await llm_service.propose_testing_strategy(refined_story, corner_cases, feedback)
+    result = await llm_service.propose_testing_strategy(
+        session_id=session_id,
+        refined_story=refined_story,
+        corner_cases=corner_cases,
+        feedback=feedback
+    )
 
     # Verificar que se recibe una lista de estrategias de testing
     assert isinstance(result, list), "El resultado debe ser una lista"
