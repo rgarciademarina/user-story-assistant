@@ -21,6 +21,7 @@ langchain-ollama = "^0.2.0"
 pydantic-settings = "^2.6.1"
 starlette = "^0.41.2"
 uvicorn = "^0.32.0"
+langchain-community = "^0.3.7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

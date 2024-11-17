@@ -3,10 +3,10 @@ from enum import Enum
 from typing import Optional, Dict, List
 from uuid import UUID
 
-class ProcessState(str, Enum):
+class ProcessState(Enum):
     REFINEMENT = "refinement"
     CORNER_CASES = "corner_cases"
-    TESTING = "testing"
+    TESTING_STRATEGY = "testing_strategy"
     COMPLETED = "completed"
 
 class SessionState(BaseModel):
