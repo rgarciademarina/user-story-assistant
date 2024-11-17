@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-from src.llm.service import LLMService
-from src.llm.config import get_llm_config
+from typing import List, Optional
+from uuid import UUID, uuid4
+from src.llm.manager import llm_service
 
 router = APIRouter()
-llm_service = LLMService(get_llm_config())
 
 class ProposeTestingStrategyRequest(BaseModel):
     story: str = Field(
@@ -25,6 +24,13 @@ class ProposeTestingStrategyRequest(BaseModel):
             "description": "Lista de casos esquina identificados para la historia de usuario."
         }
     )
+    session_id: Optional[UUID] = Field(
+        None,
+        json_schema_extra={
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "description": "Identificador único de la sesión para mantener el contexto."
+        }
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -33,7 +39,8 @@ class ProposeTestingStrategyRequest(BaseModel):
                 "corner_cases": [
                     "Intentos de inicio de sesión con contraseñas incorrectas",
                     "Acceso simultáneo desde múltiples dispositivos"
-                ]
+                ],
+                "session_id": "123e4567-e89b-12d3-a456-426614174000"
             }
         }
     )
@@ -70,14 +77,19 @@ class ProposeTestingStrategyResponse(BaseModel):
 async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
     """
     Proponer estrategias de testing basadas en una historia de usuario refinada y sus casos esquina.
-
+    
     - **story**: Historia de usuario refinada en formato de texto.
     - **corner_cases**: Lista de casos esquina identificados.
+    - **session_id**: (Opcional) Identificador de la sesión para mantener el contexto.
     """
     try:
-        testing_strategies = await llm_service.propose_testing_strategy(
-            request.story, request.corner_cases
+        session_id = str(request.session_id) if request.session_id else str(uuid4())
+        
+        # Utiliza LLMService para proponer estrategias de testing con el contexto de la sesión
+        testing_strategies = await llm_service.propose_testing_strategy_with_context(
+            request.story, request.corner_cases, session_id
         )
+        
         return {"testing_strategies": testing_strategies}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

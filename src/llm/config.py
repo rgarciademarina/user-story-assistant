@@ -3,9 +3,6 @@ from typing import Optional
 from dotenv import load_dotenv
 import os
 
-# Verificar la ubicación del archivo .env
-env_path = os.path.abspath('.env')
-print(f"Cargando archivo .env desde: {env_path}")
 load_dotenv('.env')
 
 class LLMConfig(BaseSettings):
@@ -32,10 +29,6 @@ def get_llm_config() -> LLMConfig:
     """Retorna una instancia de la configuración"""
     try:
         config = LLMConfig()
-        print("### Valores de configuración cargados ###")
-        for key, value in config.model_dump().items():
-            print(f"{key}: {value} (tipo: {type(value)})")
-        print("#########################################")
     except Exception as e:
         print(f"Error al cargar la configuración: {e}")
         raise
