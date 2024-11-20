@@ -1,109 +1,88 @@
-import { createStore } from 'vuex'
-import axios from 'axios'
+import { createStore } from 'vuex';
+import createPersistedState from 'vuex-persistedstate';
+import axios from 'axios';
 
 export default createStore({
   state: {
-    sessionId: null,
-    story: '',
+    messages: [],
+    currentStep: 'refineStory',
+    originalStory: '',
     refinedStory: '',
     cornerCases: [],
-    testingStrategies: [],
-  },
-  getters: {
   },
   mutations: {
-    setSessionId(state, sessionId) {
-      state.sessionId = sessionId;
+    addMessage(state, message) {
+      state.messages.push(message);
     },
-    setStory(state, story) {
-      state.story = story;
+    setCurrentStep(state, step) {
+      state.currentStep = step;
     },
-    setRefinedStory(state, refinedStory) {
-      state.refinedStory = refinedStory;
+    setOriginalStory(state, story) {
+      state.originalStory = story;
     },
-    setCornerCases(state, cornerCases) {
-      state.cornerCases = cornerCases;
+    setRefinedStory(state, story) {
+      state.refinedStory = story;
     },
-    setTestingStrategies(state, testingStrategies) {
-      state.testingStrategies = testingStrategies;
+    setCornerCases(state, cases) {
+      state.cornerCases = cases;
+    },
+    resetProcess(state) {
+      state.messages = [];
+      state.currentStep = 'refineStory';
+      state.originalStory = '';
+      state.refinedStory = '';
+      state.cornerCases = [];
     },
   },
   actions: {
-    async refineStory({ commit, state }, payload) {
-      console.log('refineStory action called with payload:', payload);
-      if (!payload || !payload.story) {
-        console.warn('The "story" field is missing in the payload. Aborting action.');
-        return;
-      }
-      const { story, feedback } = payload;
-      const requestData = { story };
-      if (feedback) {
-        requestData.feedback = feedback;
-      }
-      if (state.sessionId) {
-        requestData.session_id = state.sessionId;
-      }
-      console.log('Sending request to backend with data:', requestData);
-      try {
-        const response = await axios.post('/api/refine_story', requestData);
-        if (!state.sessionId) {
-          commit('setSessionId', response.data.session_id);
-        }
-        commit('setRefinedStory', response.data.refined_story);
-        commit('setStory', story);
-      } catch (error) {
-        if (error.response) {
-          console.error('Error refining story:', error.response.data);
-        } else if (error.request) {
-          console.error('No response received:', error.request);
-        } else {
-          console.error('Error setting up request:', error.message);
-        }
-      }
+    addMessage({ commit }, message) {
+      commit('addMessage', message);
     },
-    async identifyCornerCases({ commit, state }, payload) {
-      console.log('identifyCornerCases called with payload:', payload);
-      if (!payload || !payload.refinedStory) {
-        console.warn('The "refinedStory" field is missing in the payload. Aborting action.');
-        return;
-      }
-      const { refinedStory, feedback } = payload;
-      const requestData = { story: refinedStory };
-      if (feedback) {
-        requestData.feedback = feedback;
-      }
-      if (state.sessionId) {
-        requestData.session_id = state.sessionId;
-      }
-      try {
-        const response = await axios.post('/api/identify_corner_cases', requestData);
-        commit('setCornerCases', response.data.corner_cases);
-      } catch (error) {
-        console.error('Error identifying corner cases:', error);
-      }
-    },
-    async proposeTestingStrategy({ commit, state }, feedback) {
-      const payload = {
-        session_id: state.sessionId,
-        story: state.refinedStory,
-        corner_cases: state.cornerCases,
-        feedback: feedback,
-      };
-      try {
-        const response = await axios.post('/api/propose_testing_strategy', payload);
-        commit('setTestingStrategies', response.data.testing_strategies);
-      } catch (error) {
-        console.error('Error proposing testing strategies:', error);
-      }
+    setCurrentStep({ commit }, step) {
+      commit('setCurrentStep', step);
     },
     resetProcess({ commit }) {
-      commit('setSessionId', null);
-      commit('setStory', '');
-      commit('setRefinedStory', '');
-      commit('setCornerCases', []);
-      commit('setTestingStrategies', []);
+      commit('resetProcess');
+    },
+    async refineStory({ commit }, { story, feedback }) {
+      commit('setOriginalStory', story);
+      // Realizar la llamada al backend
+      const response = await axios.post('/api/refine_story', {
+        story,
+        feedback,
+      });
+      const refinedStory = response.data.refined_story;
+      commit('setRefinedStory', refinedStory);
+      // Preparar la respuesta del LLM
+      const refinementResponse = `**Historia Refinada:**\n${refinedStory}\n\n**Cambios Realizados:**\n${response.data.refinement_feedback}`;
+      return { refinementResponse };
+    },
+    async identifyCornerCases({ commit }, { refinedStory, feedback }) {
+      // Realizar la llamada al backend
+      const response = await axios.post('/api/identify_corner_cases', {
+        story: refinedStory,
+        feedback,
+      });
+      const cornerCases = response.data.corner_cases;
+      commit('setCornerCases', cornerCases);
+      const cornerCasesText = cornerCases.map((item, index) => `${index + 1}. ${item}`).join('\n');
+      const cornerCasesResponse = `**Casos Esquina Identificados:**\n${cornerCasesText}\n\n**Análisis de Cambios:**\n${response.data.corner_cases_feedback}`;
+      return { cornerCasesResponse };
+    },
+    async proposeTestingStrategy(_, { refinedStory, cornerCases, feedback }) {
+      // Realizar la llamada al backend
+      const response = await axios.post('/api/propose_testing_strategy', {
+        story: refinedStory,
+        corner_cases: cornerCases,
+        feedback,
+      });
+      const testingStrategies = response.data.testing_strategies;
+      const testingStrategiesText = testingStrategies
+        .map((item, index) => `${index + 1}. ${item}`)
+        .join('\n');
+      const testingStrategyResponse = `**Estrategias de Testing Propuestas:**\n${testingStrategiesText}\n\n**Análisis de Cambios:**\n${response.data.testing_feedback}`;
+      return { testingStrategyResponse };
     },
   },
-  modules: {
-  }
-})
+  plugins: [createPersistedState()],
+});
