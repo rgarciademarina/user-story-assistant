@@ -1,147 +1,275 @@
 <template>
-    <div>
-      <h1>Asistente de Refinamiento de Historias de Usuario</h1>
-  
-      <div v-if="currentStep === 'refineStory'">
-        <h2>Paso 1: Refinar Historia de Usuario</h2>
-        <UserStoryForm @submit="handleRefineStory" />
-        <div v-if="refinedStory">
-          <h3>Historia Refinada:</h3>
-          <p>{{ refinedStory }}</p>
-          <FeedbackForm @submit="handleRefineFeedback" />
-          <button @click="proceedToCornerCases">Continuar a Casos Esquina</button>
-        </div>
+  <div class="refinement-flow">
+    <div class="header">
+      <h2>{{ currentStateLabel }}</h2>
+    </div>
+    <div class="chat-container">
+      <div v-for="(message, index) in messages" :key="index">
+        <ChatMessage :message="message" />
       </div>
-  
-      <div v-else-if="currentStep === 'cornerCases'">
-        <h2>Paso 2: Identificar Casos Esquina</h2>
-        <div v-if="cornerCases.length">
-          <h3>Casos Esquina Identificados:</h3>
-          <ul>
-            <li v-for="(caseItem, index) in cornerCases" :key="index">{{ caseItem }}</li>
-          </ul>
-          <FeedbackForm @submit="handleCornerCasesFeedback" />
-          <button @click="proceedToTestingStrategy">Continuar a Estrategias de Testing</button>
-          <button @click="goBackToRefineStory">Volver a Refinar Historia</button>
-        </div>
-      </div>
-  
-      <div v-else-if="currentStep === 'testingStrategy'">
-        <h2>Paso 3: Proponer Estrategia de Testing</h2>
-        <div v-if="testingStrategies.length">
-          <h3>Estrategias de Testing Recomendadas:</h3>
-          <ul>
-            <li v-for="(strategy, index) in testingStrategies" :key="index">{{ strategy }}</li>
-          </ul>
-          <FeedbackForm @submit="handleTestingStrategyFeedback" />
-          <button @click="finishProcess">Finalizar</button>
-          <button @click="goBackToCornerCases">Volver a Casos Esquina</button>
-        </div>
-      </div>
-  
-      <div v-else-if="currentStep === 'finished'">
-        <h2>Proceso Completado</h2>
-        <p>¡La historia de usuario ha sido refinada exitosamente!</p>
-        <button @click="resetProcess">Empezar de Nuevo</button>
+      <div v-if="isLoading" class="loading-indicator">
+        <span>Cargando...</span>
       </div>
     </div>
-  </template>
-  
-  <script>
-  import { mapState, mapActions } from 'vuex';
-  import UserStoryForm from './UserStoryForm.vue';
-  import FeedbackForm from './FeedbackForm.vue';
-  
-  export default {
-    components: {
-      UserStoryForm,
-      FeedbackForm,
+    <div class="input-container">
+      <textarea
+        v-model="userInput"
+        @keydown.enter="handleKeyPress"
+        :placeholder="inputPlaceholder"
+        :disabled="isLoading"
+      ></textarea>
+      <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
+      <button
+        v-if="backButtonLabel"
+        @click="goBack"
+        class="back-button"
+      >
+        {{ backButtonLabel }}
+      </button>
+      <button
+        v-if="currentStep !== 'finished'"
+        @click="advanceStep"
+        :class="['advance-button', advanceButtonClass]"
+        :disabled="!canAdvance"
+      >
+        {{ nextButtonLabel }}
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapState, mapActions } from 'vuex';
+import ChatMessage from './ChatMessage.vue';
+
+export default {
+  components: {
+    ChatMessage,
+  },
+  data() {
+    return {
+      userInput: '',
+      isLoading: false,
+    };
+  },
+  computed: {
+    ...mapState(['messages', 'currentStep', 'refinedStory']),
+    currentStateLabel() {
+      switch (this.currentStep) {
+        case 'refineStory':
+          return 'Refinamiento';
+        case 'cornerCases':
+          return 'Casos Esquina';
+        case 'testingStrategy':
+          return 'Testing';
+        case 'finished':
+          return 'Proceso Completado';
+        default:
+          return '';
+      }
     },
-    data() {
-      return {
-        currentStep: 'refineStory',
-      };
+    nextButtonLabel() {
+      if (this.currentStep === 'refineStory') return 'Casos Esquina';
+      if (this.currentStep === 'cornerCases') return 'Testing';
+      if (this.currentStep === 'testingStrategy') return 'Finalizar';
+      return null;
     },
-    computed: {
-      ...mapState(['refinedStory', 'cornerCases', 'testingStrategies']),
+    backButtonLabel() {
+      if (this.currentStep === 'cornerCases') return 'Refinamiento';
+      if (this.currentStep === 'testingStrategy') return 'Casos Esquina';
+      return null;
     },
-    methods: {
-      ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'resetProcess']),
-      async handleRefineStory(payload) {
-        console.trace('handleRefineStory called with:', payload);
-        if (!payload || !payload.story) {
-          console.warn('handleRefineStory: Invalid payload received');
-          return;
+    advanceButtonClass() {
+      return this.currentStep === 'testingStrategy' ? 'finish-button' : 'next-button';
+    },
+    canAdvance() {
+      if (this.currentStep === 'refineStory') {
+        // Solo permitir avanzar si hay una historia refinada
+        return !!this.refinedStory;
+      }
+      return true;
+    },
+    inputPlaceholder() {
+      return this.isLoading ? 'Esperando respuesta...' : 'Escribe tu feedback aquí...';
+    },
+  },
+  methods: {
+    ...mapActions([
+      'refineStory',
+      'identifyCornerCases',
+      'proposeTestingStrategy',
+      'addMessage',
+      'resetProcess',
+      'setCurrentStep',
+    ]),
+    async sendFeedback() {
+      if (!this.userInput.trim()) return;
+
+      // Agregar el mensaje del usuario al historial
+      this.addMessage({ text: this.userInput, sender: 'user' });
+      const feedback = this.userInput;
+      this.userInput = '';
+      this.isLoading = true;
+
+      try {
+        if (this.currentStep === 'refineStory') {
+          await this.handleRefineFeedback(feedback);
+        } else if (this.currentStep === 'cornerCases') {
+          await this.handleCornerCasesFeedback(feedback);
+        } else if (this.currentStep === 'testingStrategy') {
+          await this.handleTestingStrategyFeedback(feedback);
         }
-        console.log('handleRefineStory called with:', payload);
-        await this.refineStory(payload);
-      },
-      async handleRefineFeedback(feedback) {
-        console.log('handleRefineFeedback - feedback:', feedback);
-        const story = this.$store.state.refinedStory;
-        console.log('handleRefineFeedback - story:', story);
-        if (!story) {
-            console.warn('No hay historia refinada disponible para enviar feedback');
-            return;
-        }
-        await this.refineStory({ story, feedback });
-      },
-      proceedToCornerCases() {
-        this.currentStep = 'cornerCases';
-        this.identifyCornerCases('');
-      },
-      async handleCornerCasesFeedback(feedback) {
-        console.log('handleCornerCasesFeedback - feedback:', feedback);
-        const refinedStory = this.$store.state.refinedStory;
-        await this.identifyCornerCases({ refinedStory, feedback });
-      },
-      proceedToTestingStrategy() {
-        this.currentStep = 'testingStrategy';
-        this.proposeTestingStrategy('');
-      },
-      async handleTestingStrategyFeedback(feedback) {
-        await this.proposeTestingStrategy(feedback);
-      },
-      finishProcess() {
-        this.currentStep = 'finished';
-      },
-      goBackToRefineStory() {
-        this.currentStep = 'refineStory';
-      },
-      goBackToCornerCases() {
-        this.currentStep = 'cornerCases';
-      },
-      resetProcess() {
-        this.$store.dispatch('resetProcess');  // Llamar a la acción del store
-        this.currentStep = 'refineStory';
-      },
+      } finally {
+        this.isLoading = false;
+      }
     },
-  };
-  </script>
-  
-  <style scoped>
-  /* Estilos personalizados */
-  h1, h2, h3 {
-    color: #333;
-  }
-  button {
-    margin: 10px 5px;
-    padding: 10px 20px;
-    background-color: #42b983;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
-  button:hover {
-    background-color: #358a6b;
-  }
-  textarea {
-    width: 100%;
-    min-height: 80px;
-    margin-bottom: 10px;
-  }
-  label {
-    display: block;
-    margin-top: 10px;
-  }
-  </style>
+    async handleRefineFeedback(feedback) {
+      const story = this.$store.state.originalStory || this.previousUserStory();
+      const payload = { story, feedback };
+      const result = await this.refineStory(payload);
+      // Agregar la respuesta del LLM al historial
+      this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+    },
+    async handleCornerCasesFeedback(feedback) {
+      const refinedStory = this.$store.state.refinedStory;
+      const payload = { refinedStory, feedback };
+      const result = await this.identifyCornerCases(payload);
+      this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
+    },
+    async handleTestingStrategyFeedback(feedback) {
+      const refinedStory = this.$store.state.refinedStory;
+      const cornerCases = this.$store.state.cornerCases;
+      const payload = { refinedStory, cornerCases, feedback };
+      const result = await this.proposeTestingStrategy(payload);
+      this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
+    },
+    async advanceStep() {
+      if (this.isLoading) return;
+
+      if (this.currentStep === 'refineStory') {
+        if (!this.refinedStory) return;
+        this.setCurrentStep('cornerCases');
+        this.isLoading = true;
+        try {
+          await this.handleCornerCasesFeedback(''); // Enviar feedback vacío para avanzar
+        } finally {
+          this.isLoading = false;
+        }
+      } else if (this.currentStep === 'cornerCases') {
+        this.setCurrentStep('testingStrategy');
+        this.isLoading = true;
+        try {
+          await this.handleTestingStrategyFeedback(''); // Enviar feedback vacío para avanzar
+        } finally {
+          this.isLoading = false;
+        }
+      } else if (this.currentStep === 'testingStrategy') {
+        this.setCurrentStep('finished');
+        this.addMessage({
+          text: '¡El proceso ha finalizado exitosamente!',
+          sender: 'assistant',
+        });
+      }
+    },
+    goBack() {
+      if (this.currentStep === 'testingStrategy') {
+        this.setCurrentStep('cornerCases');
+      } else if (this.currentStep === 'cornerCases') {
+        this.setCurrentStep('refineStory');
+      }
+    },
+    previousUserStory() {
+      const storyMessage = this.messages.find(
+        (message) => message.sender === 'userStory'
+      );
+      return storyMessage ? storyMessage.text : '';
+    },
+    handleKeyPress(event) {
+      if (event.shiftKey) {
+        // Permitir el salto de línea
+        return;
+      } else {
+        // Prevenir el salto de línea y enviar el mensaje
+        event.preventDefault();
+        this.sendFeedback();
+      }
+    },
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const chatContainer = this.$el.querySelector('.chat-container');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      });
+    },
+    addMessage(message) {
+      this.$store.dispatch('addMessage', message);
+      this.scrollToBottom();
+    },
+  },
+  mounted() {
+    // Resetear el proceso al cargar el componente
+    this.resetProcess();
+    this.setCurrentStep('refineStory');
+    // Solicitar la historia de usuario inicial
+    this.addMessage({
+      text: 'Por favor, ingresa la historia de usuario que deseas refinar.',
+      sender: 'assistant',
+    });
+  },
+};
+</script>
+
+<style scoped>
+.refinement-flow {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: #fff;
+}
+.header {
+  padding: 10px;
+  text-align: center;
+  background-color: #333;
+  border-bottom: 1px solid #444;
+}
+.chat-container {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+.input-container {
+  display: flex;
+  padding: 10px;
+  background-color: #333;
+  align-items: center;
+  justify-content: flex-end;
+}
+.input-container textarea {
+  flex: 1;
+  resize: none;
+  background-color: #2e2e2e;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 10px;
+  margin-right: 10px;
+  height: 50px;
+}
+.input-container button {
+  margin-left: 5px;
+}
+.back-button {
+  background-color: #dc3545;
+}
+.advance-button {
+  background-color: #28a745;
+}
+.finish-button {
+  background-color: #007bff;
+}
+.loading-indicator {
+  text-align: center;
+  color: #aaa;
+  margin-top: 10px;
+}
+</style>
