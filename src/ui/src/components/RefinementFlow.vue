@@ -12,17 +12,27 @@
       </div>
     </div>
     <div class="input-container">
-      <textarea v-model="userInput" @keyup.enter="sendFeedback"></textarea>
-      <button @click="sendFeedback">Enviar</button>
+      <textarea
+        v-model="userInput"
+        @keydown.enter="handleKeyPress"
+        :placeholder="inputPlaceholder"
+        :disabled="isLoading"
+      ></textarea>
+      <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
+      <button
+        v-if="backButtonLabel"
+        @click="goBack"
+        class="back-button"
+      >
+        {{ backButtonLabel }}
+      </button>
       <button
         v-if="currentStep !== 'finished'"
         @click="advanceStep"
         :class="['advance-button', advanceButtonClass]"
+        :disabled="!canAdvance"
       >
         {{ nextButtonLabel }}
-      </button>
-      <button v-if="backButtonLabel" @click="goBack" class="back-button">
-        {{ backButtonLabel }}
       </button>
     </div>
   </div>
@@ -43,7 +53,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep']),
+    ...mapState(['messages', 'currentStep', 'refinedStory']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -66,17 +76,35 @@ export default {
     },
     backButtonLabel() {
       if (this.currentStep === 'cornerCases') return 'Refinamiento';
-      if (this.currentStep === 'testingStrategy') return 'Refinamiento';
+      if (this.currentStep === 'testingStrategy') return 'Casos Esquina';
       return null;
     },
     advanceButtonClass() {
       return this.currentStep === 'testingStrategy' ? 'finish-button' : 'next-button';
     },
+    canAdvance() {
+      if (this.currentStep === 'refineStory') {
+        // Solo permitir avanzar si hay una historia refinada
+        return !!this.refinedStory;
+      }
+      return true;
+    },
+    inputPlaceholder() {
+      return this.isLoading ? 'Esperando respuesta...' : 'Escribe tu feedback aquí...';
+    },
   },
   methods: {
-    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'addMessage', 'resetProcess', 'setCurrentStep']),
+    ...mapActions([
+      'refineStory',
+      'identifyCornerCases',
+      'proposeTestingStrategy',
+      'addMessage',
+      'resetProcess',
+      'setCurrentStep',
+    ]),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
+
       // Agregar el mensaje del usuario al historial
       this.addMessage({ text: this.userInput, sender: 'user' });
       const feedback = this.userInput;
@@ -96,7 +124,7 @@ export default {
       }
     },
     async handleRefineFeedback(feedback) {
-      const story = this.$store.state.originalStory || this.previousUserMessage();
+      const story = this.$store.state.originalStory || this.previousUserStory();
       const payload = { story, feedback };
       const result = await this.refineStory(payload);
       // Agregar la respuesta del LLM al historial
@@ -117,12 +145,24 @@ export default {
     },
     async advanceStep() {
       if (this.isLoading) return;
+
       if (this.currentStep === 'refineStory') {
+        if (!this.refinedStory) return;
         this.setCurrentStep('cornerCases');
-        await this.sendFeedback(); // Enviar feedback vacío para avanzar
+        this.isLoading = true;
+        try {
+          await this.handleCornerCasesFeedback(''); // Enviar feedback vacío para avanzar
+        } finally {
+          this.isLoading = false;
+        }
       } else if (this.currentStep === 'cornerCases') {
         this.setCurrentStep('testingStrategy');
-        await this.sendFeedback(); // Enviar feedback vacío para avanzar
+        this.isLoading = true;
+        try {
+          await this.handleTestingStrategyFeedback(''); // Enviar feedback vacío para avanzar
+        } finally {
+          this.isLoading = false;
+        }
       } else if (this.currentStep === 'testingStrategy') {
         this.setCurrentStep('finished');
         this.addMessage({
@@ -133,17 +173,36 @@ export default {
     },
     goBack() {
       if (this.currentStep === 'testingStrategy') {
-        this.setCurrentStep('refineStory');
+        this.setCurrentStep('cornerCases');
       } else if (this.currentStep === 'cornerCases') {
         this.setCurrentStep('refineStory');
       }
     },
-    previousUserMessage() {
-      const reversedMessages = [...this.messages].reverse();
-      for (const message of reversedMessages) {
-        if (message.sender === 'user') return message.text;
+    previousUserStory() {
+      const storyMessage = this.messages.find(
+        (message) => message.sender === 'userStory'
+      );
+      return storyMessage ? storyMessage.text : '';
+    },
+    handleKeyPress(event) {
+      if (event.shiftKey) {
+        // Permitir el salto de línea
+        return;
+      } else {
+        // Prevenir el salto de línea y enviar el mensaje
+        event.preventDefault();
+        this.sendFeedback();
       }
-      return '';
+    },
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const chatContainer = this.$el.querySelector('.chat-container');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      });
+    },
+    addMessage(message) {
+      this.$store.dispatch('addMessage', message);
+      this.scrollToBottom();
     },
   },
   mounted() {
@@ -183,8 +242,9 @@ export default {
   padding: 10px;
   background-color: #333;
   align-items: center;
+  justify-content: flex-end;
 }
-textarea {
+.input-container textarea {
   flex: 1;
   resize: none;
   background-color: #2e2e2e;
@@ -195,26 +255,17 @@ textarea {
   margin-right: 10px;
   height: 50px;
 }
-button {
-  background-color: #42b983;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  cursor: pointer;
+.input-container button {
   margin-left: 5px;
-  border-radius: 5px;
 }
-button:hover {
-  background-color: #358a6b;
+.back-button {
+  background-color: #dc3545;
 }
 .advance-button {
   background-color: #28a745;
 }
 .finish-button {
   background-color: #007bff;
-}
-.back-button {
-  background-color: #dc3545;
 }
 .loading-indicator {
   text-align: center;
