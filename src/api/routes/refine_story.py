@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ConfigDict
 from src.llm.service import LLMService
 from src.llm.config import get_llm_config
@@ -53,12 +53,20 @@ class RefineStoryResponse(BaseModel):
             "description": "Historia de usuario refinada con mejoras en claridad y completitud."
         }
     )
+    refinement_feedback: str = Field(
+        ...,
+        json_schema_extra={
+            "example": "Se especificó el método de autenticación y se detallaron los datos a los que se accede.",
+            "description": "Resumen de los cambios realizados por el LLM en la historia de usuario."
+        }
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "session_id": "123e4567-e89b-12d3-a456-426614174000",
-                "refined_story": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a los servicios y funciones disponibles en mi perfil personal."
+                "refined_story": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a los servicios y funciones disponibles en mi perfil personal.",
+                "refinement_feedback": "Se especificó el método de autenticación y se añadió información sobre los datos personales accedidos."
             }
         }
     )
@@ -78,19 +86,18 @@ async def refine_story(request: RefineStoryRequest):
     - **feedback**: Feedback opcional del usuario sobre la historia refinada anterior.
     """
     try:
-        # Si no hay session_id, crear una nueva sesión
         session_id = request.session_id or llm_service.create_session()
-        
-        # Refinar la historia usando el servicio LLM
-        refined_story = await llm_service.refine_story(
+
+        result = await llm_service.refine_story(
             session_id=session_id,
             user_story=request.story,
             feedback=request.feedback
         )
-        
+
         return {
             "session_id": session_id,
-            "refined_story": refined_story
+            "refined_story": result['refined_story'],
+            "refinement_feedback": result['refinement_feedback']
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

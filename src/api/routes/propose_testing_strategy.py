@@ -70,14 +70,23 @@ class ProposeTestingStrategyResponse(BaseModel):
             "description": "Lista de estrategias de testing propuestas basadas en la historia refinada y los casos esquina."
         }
     )
+    testing_feedback: str = Field(
+        ...,
+        json_schema_extra={
+            "description": "Resumen de los cambios realizados por el LLM."
+        }
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
+                "session_id": "123e4567-e89b-12d3-a456-426614174000",
                 "testing_strategies": [
-                    "Pruebas de autenticación con credenciales válidas e inválidas.",
-                    "Pruebas de concurrencia para verificar el manejo de múltiples sesiones."
-                ]
+                    "1. **Pruebas de Carga:** Realizar pruebas bajo carga para asegurar que el sistema maneja múltiples solicitudes de inicio de sesión simultáneas.",
+                    "2. **Pruebas de Seguridad:** Implementar pruebas para detectar y prevenir ataques de fuerza bruta.",
+                    "3. **Pruebas de Autenticación de Dos Factores:** Verificar que el 2FA funciona correctamente en diversos escenarios."
+                ],
+                "testing_feedback": "Se añadieron pruebas de rendimiento bajo carga y pruebas de seguridad según el feedback proporcionado."
             }
         }
     )
@@ -102,7 +111,7 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
         session_id = request.session_id or llm_service.create_session()
         
         # Proponer estrategias usando el servicio LLM
-        testing_strategies = await llm_service.propose_testing_strategy(
+        result = await llm_service.propose_testing_strategy(
             session_id=session_id,
             refined_story=request.story,
             corner_cases=request.corner_cases,
@@ -111,7 +120,8 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
         
         return {
             "session_id": session_id,
-            "testing_strategies": testing_strategies
+            "testing_strategies": result['testing_strategies'],
+            "testing_feedback": result['testing_feedback']
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

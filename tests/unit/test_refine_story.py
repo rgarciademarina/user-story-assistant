@@ -8,19 +8,27 @@ async def test_refine_story_without_feedback(llm_service):
     Como usuario quiero poder iniciar sesión 
     para acceder a mi cuenta personal
     """
+
     result = await llm_service.refine_story(
         session_id=session_id,
         user_story=user_story
     )
 
-    # Verificar que se recibió una cadena refinada
-    assert isinstance(result, str), "El resultado debe ser una cadena"
-    assert len(result.strip()) > 0, "El resultado no debe estar vacío"
-    assert "Como usuario" in result, "La historia refinada debe mantener el formato de historia de usuario"
-    # Verificar que el feedback se ha tenido en cuenta (solo en líneas no vacías)
-    assert any(["correo" in line.lower() or "email" in line.lower() or "contraseña" in line.lower() 
-               for line in result.split('\n') if line.strip()]), \
-        "La historia refinada debe incorporar el feedback sobre el método de autenticación"
+    # Verificar que se recibió un diccionario con las claves esperadas
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
+    assert 'refined_story' in result, "El resultado debe contener 'refined_story'"
+    assert 'refinement_feedback' in result, "El resultado debe contener 'refinement_feedback'"
+    
+    # Verificar que la historia refinada es una cadena no vacía
+    refined_story = result['refined_story']
+    assert isinstance(refined_story, str), "La historia refinada debe ser una cadena"
+    assert len(refined_story.strip()) > 0, "La historia refinada no debe estar vacía"
+    assert "Como usuario" in refined_story, "La historia refinada debe mantener el formato de historia de usuario"
+    
+    # Verificar que el feedback es una cadena no vacía
+    refinement_feedback = result['refinement_feedback']
+    assert isinstance(refinement_feedback, str), "El feedback de refinamiento debe ser una cadena"
+    assert len(refinement_feedback.strip()) > 0, "El feedback de refinamiento no debe estar vacío"
 
 @pytest.mark.asyncio
 async def test_refine_story_with_feedback(llm_service):
@@ -38,10 +46,24 @@ async def test_refine_story_with_feedback(llm_service):
         feedback=feedback
     )
 
-    # Verificar que se recibió una cadena refinada
-    assert isinstance(result, str), "El resultado debe ser una cadena"
-    assert len(result.strip()) > 0, "El resultado no debe estar vacío"
-    assert "Como usuario" in result, "La historia refinada debe mantener el formato de historia de usuario"
+    # Verificar que se recibió un diccionario con las claves esperadas
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
+    assert 'refined_story' in result, "El resultado debe contener 'refined_story'"
+    assert 'refinement_feedback' in result, "El resultado debe contener 'refinement_feedback'"
+
+    # Verificar que la historia refinada es una cadena no vacía
+    refined_story = result['refined_story']
+    assert isinstance(refined_story, str), "La historia refinada debe ser una cadena"
+    assert len(refined_story.strip()) > 0, "La historia refinada no debe estar vacía"
+    assert "Como usuario" in refined_story, "La historia refinada debe mantener el formato de historia de usuario"
     assert any(["correo" in line.lower() or "email" in line.lower() or "contraseña" in line.lower() 
-               for line in result.split('\n') if line.strip()]), \
+               for line in refined_story.split('\n') if line.strip()]), \
         "La historia refinada debe incorporar el feedback sobre el método de autenticación"
+
+    # Verificar que el feedback de refinamiento es una cadena no vacía
+    refinement_feedback = result['refinement_feedback']
+    assert isinstance(refinement_feedback, str), "El feedback de refinamiento debe ser una cadena"
+    assert len(refinement_feedback.strip()) > 0, "El feedback de refinamiento no debe estar vacío"
+    assert any(["método de autenticación" in refinement_feedback.lower() or
+                "datos" in refinement_feedback.lower()] ), \
+        "El feedback de refinamiento debe mencionar los cambios realizados según el feedback proporcionado"
