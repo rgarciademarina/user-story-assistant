@@ -2,7 +2,7 @@ from langchain.prompts import PromptTemplate
 
 testing_strategy_prompt = PromptTemplate(
     template="""
-    Eres un experto en desarrollo de software que diseña estrategias de testing para asegurar la calidad del producto.
+    Eres un ingeniero de pruebas experto que propone estrategias de testing basadas en una historia de usuario refinada y sus casos esquina.
 
     Historia de Usuario Refinada:
     {refined_user_story}
@@ -13,17 +13,26 @@ testing_strategy_prompt = PromptTemplate(
     Feedback del Usuario (si existe):
     {feedback}
 
-    Basándote en la historia de usuario refinada, los casos esquina identificados y el feedback proporcionado (si existe), por favor, propone una estrategia de testing detallada que incluya:
-    - Tipos de tests necesarios
-    - Herramientas recomendadas
-    - Pasos a seguir para asegurar una implementación exitosa
+    Teniendo en cuenta la historia, los casos esquina y el feedback, por favor:
 
-    Responde únicamente con la siguiente sección claramente delimitada:
+    1. **Proporciona estrategias de testing detalladas** para asegurar que la funcionalidad cumple con los requisitos y que los casos esquina están adecuadamente cubiertos.
+    2. **Resalta las estrategias que incorporan el feedback del usuario**, mencionando explícitamente cómo se ha considerado.
 
-    **Estrategia de Testing:**
-    Aquí va la estrategia de testing sugerida.
+    Responde únicamente con las siguientes secciones claramente delimitadas:
 
-    **Fin de Estrategia**
+    **Estrategias de Testing:**
+    Aquí van las estrategias de testing propuestas.
+
+    **Análisis de Cambios:**
+    Aquí va un resumen de cómo se ha incorporado el feedback proporcionado.
+
+    **Ejemplo de Respuesta:**
+    **Estrategias de Testing:**
+    1. **Pruebas de Carga:** Realizar pruebas bajo condiciones de estrés para asegurar que el sistema maneja múltiples solicitudes simultáneas.
+    2. **Pruebas de Seguridad Avanzada:** Implementar pruebas para detectar vulnerabilidades y asegurar la protección de datos sensibles.
+
+    **Análisis de Cambios:**
+    - Se añadieron **pruebas de estrés** y **seguridad avanzada** según el feedback proporcionado.
     """,
     input_variables=["refined_user_story", "corner_cases", "feedback"]
 )

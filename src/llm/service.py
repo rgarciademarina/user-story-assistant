@@ -84,58 +84,76 @@ class LLMService:
         chain,
         input_variables: Dict[str, Any],
         process_state: ProcessState,
-        extract_marker: str,
+        extract_markers: List[str],
         update_session_callback: Callable[[SessionState, Any], None],
         format_interaction: Callable[[Any], Tuple[str, str]],
-        post_process_response: Callable[[str], Any] = None
+        post_process_response: Callable[[Dict[str, str]], Any] = None
     ) -> Any:
         memory = self.memories[session_id]
         session = self.sessions[session_id]
         session.current_state = process_state
 
         try:
-            # Agregar historial de chat a las variables de entrada
+            # Añadir el input original del usuario a la memoria
+            if "feedback" in input_variables:
+                original_input = f"Input del usuario:\n{input_variables.get('user_story', '')}\nFeedback: {input_variables.get('feedback', 'No hay feedback')}"
+            else:
+                original_input = f"Input del usuario:\n{input_variables.get('user_story', input_variables.get('refined_user_story', ''))}"
+            
+            memory.add_message(HumanMessage(content=original_input))
+            
             input_variables["chat_history"] = memory.messages
-            # Proveer feedback por defecto si no se proporciona
             if "feedback" in input_variables and not input_variables["feedback"]:
                 input_variables["feedback"] = "No hay feedback proporcionado."
 
             response = await chain.ainvoke(input_variables)
+            extracted_sections = self.extract_multiple_sections(response, extract_markers)
 
-            extracted_text = self.extract_section(response, extract_marker)
-
-            # Procesamiento opcional de la respuesta
             if post_process_response:
-                result = post_process_response(extracted_text)
+                result = post_process_response(extracted_sections)
             else:
-                result = extracted_text
+                result = extracted_sections
 
-            # Actualizar la sesión con el resultado
             update_session_callback(session, result)
 
-            # Formatear la interacción para el historial
             human_message, ai_message = format_interaction(result)
-
-            # Guardar la interacción en el historial
-            await self._add_to_memory(
-                session_id,
-                human_message,
-                ai_message
-            )
+            
+            # Añadir la interacción formateada a la memoria
+            memory.add_message(HumanMessage(content=human_message))
+            memory.add_message(AIMessage(content=ai_message))
 
             return result
         except Exception as e:
             logger.error(f"Error en el paso {process_state.name}: {e}")
             raise
 
-    async def refine_story(self, session_id: UUID, user_story: str, feedback: str | None = None) -> str:
+    def extract_multiple_sections(self, text: str, markers: List[str]) -> Dict[str, str]:
+        sections = {}
+        for i, marker in enumerate(markers):
+            start_index = text.find(marker)
+            if start_index != -1:
+                start_index += len(marker)
+                end_index = text.find(markers[i+1], start_index) if i+1 < len(markers) else len(text)
+                sections[marker] = text[start_index:end_index].strip()
+            else:
+                sections[marker] = ''
+        return sections
+
+    async def refine_story(self, session_id: UUID, user_story: str, feedback: str | None = None) -> Dict[str, str]:
         def update_session(session, result):
-            session.refined_story = result
+            session.refined_story = result['refined_story']
+            session.refinement_feedback = result['refinement_feedback']
 
         def format_interaction(result):
             human_message = f"Historia original: {user_story}\nFeedback: {feedback}"
-            ai_message = f"Historia refinada: {result}"
+            ai_message = f"Historia refinada: {result['refined_story']}\nCambios realizados: {result['refinement_feedback']}"
             return human_message, ai_message
+
+        def post_process_response(extracted_sections):
+            return {
+                'refined_story': extracted_sections.get('**Historia Refinada:**', '').strip(),
+                'refinement_feedback': extracted_sections.get('**Cambios Realizados:**', '').strip()
+            }
 
         input_vars = {
             "user_story": user_story,
@@ -147,25 +165,33 @@ class LLMService:
             chain=self.refinement_chain,
             input_variables=input_vars,
             process_state=ProcessState.REFINEMENT,
-            extract_marker="**Historia Refinada:**",
+            extract_markers=["**Historia Refinada:**", "**Cambios Realizados:**"],
             update_session_callback=update_session,
-            format_interaction=format_interaction
+            format_interaction=format_interaction,
+            post_process_response=post_process_response
         )
 
         return result
 
-    async def identify_corner_cases(self, session_id: UUID, refined_story: str, feedback: str | None = None) -> List[str]:
+    async def identify_corner_cases(self, session_id: UUID, refined_story: str, feedback: str | None = None) -> Dict[str, Any]:
         def update_session(session, result):
-            session.corner_cases = result
+            session.corner_cases = result['corner_cases']
+            session.corner_cases_feedback = result['corner_cases_feedback']
 
         def format_interaction(result):
-            corner_cases_formatted = '\n'.join(result)
+            corner_cases_formatted = '\n'.join(result['corner_cases'])
             human_message = f"Historia refinada: {refined_story}\nFeedback: {feedback}"
-            ai_message = f"Casos esquina identificados:\n{corner_cases_formatted}"
+            ai_message = f"Casos esquina identificados:\n{corner_cases_formatted}\nAnálisis de Cambios:\n{result['corner_cases_feedback']}"
             return human_message, ai_message
 
-        def post_process_response(extracted_text):
-            return [caso.strip() for caso in extracted_text.split('\n') if caso.strip()]
+        def post_process_response(extracted_sections):
+            corner_cases_text = extracted_sections.get('**Casos Esquina:**', '').strip()
+            corner_cases = [case.strip() for case in corner_cases_text.split('\n') if case.strip()]
+            corner_cases_feedback = extracted_sections.get('**Análisis de Cambios:**', '').strip()
+            return {
+                'corner_cases': corner_cases,
+                'corner_cases_feedback': corner_cases_feedback
+            }
 
         input_vars = {
             "refined_user_story": refined_story,
@@ -177,7 +203,7 @@ class LLMService:
             chain=self.corner_case_chain,
             input_variables=input_vars,
             process_state=ProcessState.CORNER_CASES,
-            extract_marker="**Casos Esquina:**",
+            extract_markers=["**Casos Esquina:**", "**Análisis de Cambios:**"],
             update_session_callback=update_session,
             format_interaction=format_interaction,
             post_process_response=post_process_response
@@ -185,23 +211,29 @@ class LLMService:
 
         return result
 
-    async def propose_testing_strategy(self, session_id: UUID, refined_story: str, corner_cases: List[str], feedback: str | None = None) -> List[str]:
+    async def propose_testing_strategy(self, session_id: UUID, refined_story: str, corner_cases: List[str], feedback: str | None = None) -> Dict[str, Any]:
         def update_session(session, result):
-            session.testing_strategies = result
+            session.testing_strategies = result['testing_strategies']
+            session.testing_feedback = result['testing_feedback']
 
         def format_interaction(result):
-            corner_cases_formatted = ', '.join(corner_cases)
-            strategies_formatted = '\n'.join(result)
-            human_message = f"Historia refinada: {refined_story}\nCasos esquina: {corner_cases_formatted}\nFeedback: {feedback}"
-            ai_message = f"Estrategias de testing propuestas:\n{strategies_formatted}"
+            testing_strategies_formatted = '\n'.join(result['testing_strategies'])
+            human_message = f"Historia refinada: {refined_story}\nCasos esquina: {corner_cases}\nFeedback: {feedback}"
+            ai_message = f"Estrategias de Testing propuestas:\n{testing_strategies_formatted}\nAnálisis de Cambios:\n{result['testing_feedback']}"
             return human_message, ai_message
 
-        def post_process_response(extracted_text):
-            return [strategy.strip() for strategy in extracted_text.split('\n') if strategy.strip()]
+        def post_process_response(extracted_sections):
+            testing_strategies_text = extracted_sections.get('**Estrategias de Testing:**', '').strip()
+            testing_strategies = [strategy.strip() for strategy in testing_strategies_text.split('\n') if strategy.strip()]
+            testing_feedback = extracted_sections.get('**Análisis de Cambios:**', '').strip()
+            return {
+                'testing_strategies': testing_strategies,
+                'testing_feedback': testing_feedback
+            }
 
         input_vars = {
             "refined_user_story": refined_story,
-            "corner_cases": "\n".join(corner_cases),
+            "corner_cases": '\n'.join(corner_cases),
             "feedback": feedback,
         }
 
@@ -210,7 +242,7 @@ class LLMService:
             chain=self.testing_strategy_chain,
             input_variables=input_vars,
             process_state=ProcessState.TESTING_STRATEGY,
-            extract_marker="**Estrategias de Testing:**",
+            extract_markers=["**Estrategias de Testing:**", "**Análisis de Cambios:**"],
             update_session_callback=update_session,
             format_interaction=format_interaction,
             post_process_response=post_process_response

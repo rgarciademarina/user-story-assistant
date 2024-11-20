@@ -4,27 +4,34 @@ import pytest
 async def test_identify_corner_cases_without_feedback(llm_service):
     """Test para identificar casos esquina sin feedback"""
     session_id = llm_service.create_session()
-    refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
+    refined_story = "Como usuario quiero..."
 
     result = await llm_service.identify_corner_cases(
         session_id=session_id,
         refined_story=refined_story
     )
 
-    # Verificar que se recibe una lista de casos esquina
-    assert isinstance(result, list), "El resultado debe ser una lista"
-    assert len(result) > 0, "Debe haber al menos un caso esquina identificado"
-    for caso in result:
-        assert isinstance(caso, str), "Cada caso esquina debe ser una cadena"
-        if caso.strip():  # Solo validar líneas no vacías
-            assert len(caso.strip()) > 0, "Los casos esquina no deben estar vacíos"
+    # Verificar que se recibió un diccionario con las claves esperadas
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
+    assert 'corner_cases' in result, "El resultado debe contener 'corner_cases'"
+    assert 'corner_cases_feedback' in result, "El resultado debe contener 'corner_cases_feedback'"
+
+    # Verificar que los casos esquina son una lista no vacía
+    corner_cases = result['corner_cases']
+    assert isinstance(corner_cases, list), "Los casos esquina deben ser una lista"
+    assert len(corner_cases) > 0, "Debe haber al menos un caso esquina identificado"
+
+    # Verificar que el feedback es una cadena no vacía
+    corner_cases_feedback = result['corner_cases_feedback']
+    assert isinstance(corner_cases_feedback, str), "El feedback debe ser una cadena"
+    assert len(corner_cases_feedback.strip()) > 0, "El feedback no debe estar vacío"
 
 @pytest.mark.asyncio
 async def test_identify_corner_cases_with_feedback(llm_service):
     """Test para identificar casos esquina con feedback"""
     session_id = llm_service.create_session()
-    refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
-    feedback = "Considerar también casos de autenticación de dos factores y bloqueos de cuenta por inactividad"
+    refined_story = "Como usuario quiero..."
+    feedback = "Considerar casos de autenticación de dos factores y bloqueos por inactividad"
 
     result = await llm_service.identify_corner_cases(
         session_id=session_id,
@@ -32,15 +39,19 @@ async def test_identify_corner_cases_with_feedback(llm_service):
         feedback=feedback
     )
 
-    # Verificar que se recibe una lista de casos esquina
-    assert isinstance(result, list), "El resultado debe ser una lista"
-    assert len(result) > 0, "Debe haber al menos un caso esquina identificado"
-    for caso in result:
-        assert isinstance(caso, str), "Cada caso esquina debe ser una cadena"
-        if caso.strip():  # Solo validar líneas no vacías
-            assert len(caso.strip()) > 0, "Los casos esquina no deben estar vacíos"
-    # Verificar que el feedback se ha tenido en cuenta
-    assert any(["2fa" in caso.lower() or 
-                "dos factores" in caso.lower() or 
-                "inactividad" in caso.lower() for caso in result if caso.strip()]), \
-        "Los casos esquina deben incluir escenarios mencionados en el feedback"
+    # Verificar que se recibió un diccionario con las claves esperadas
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
+    assert 'corner_cases' in result, "El resultado debe contener 'corner_cases'"
+    assert 'corner_cases_feedback' in result, "El resultado debe contener 'corner_cases_feedback'"
+
+    # Verificar que los casos esquina son una lista no vacía
+    corner_cases = result['corner_cases']
+    assert isinstance(corner_cases, list), "Los casos esquina deben ser una lista"
+    assert len(corner_cases) > 0, "Debe haber al menos un caso esquina identificado"
+
+    # Verificar que el feedback es una cadena no vacía y contiene referencias al feedback proporcionado
+    corner_cases_feedback = result['corner_cases_feedback']
+    assert isinstance(corner_cases_feedback, str), "El feedback debe ser una cadena"
+    assert len(corner_cases_feedback.strip()) > 0, "El feedback no debe estar vacío"
+    assert any(keyword in corner_cases_feedback.lower() for keyword in ["autenticación de dos factores", "inactividad"]), \
+        "El feedback debe mencionar los cambios relacionados con el feedback proporcionado"

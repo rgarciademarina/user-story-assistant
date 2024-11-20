@@ -20,13 +20,24 @@ async def test_refine_story_endpoint(llm_service):
         
         response_json = response.json()
         assert "refined_story" in response_json, "Falta la clave 'refined_story' en la respuesta"
+        assert "refinement_feedback" in response_json, "Falta la clave 'refinement_feedback' en la respuesta"
         
         refined_story = response_json["refined_story"]
+        refinement_feedback = response_json["refinement_feedback"]
+
         assert isinstance(refined_story, str), "El valor de 'refined_story' debe ser una cadena"
         assert len(refined_story.strip()) > 0, "El valor de 'refined_story' no debe estar vacío"
+
+        assert isinstance(refinement_feedback, str), "El valor de 'refinement_feedback' debe ser una cadena"
+        assert len(refinement_feedback.strip()) > 0, "El valor de 'refinement_feedback' no debe estar vacío"
         
-        # Verificar que el feedback se ha tenido en cuenta
+        # Verificar que el feedback se ha tenido en cuenta en la historia refinada
         assert any(["correo" in refined_story.lower() or 
                    "email" in refined_story.lower() or 
                    "contraseña" in refined_story.lower()]), \
             "La historia refinada debe incorporar el feedback sobre el método de autenticación"
+
+        # Verificar que el feedback de refinamiento menciona los cambios realizados
+        assert any(["método de autenticación" in refinement_feedback.lower() or
+                    "datos" in refinement_feedback.lower()] ), \
+            "El feedback de refinamiento debe mencionar los cambios realizados según el feedback proporcionado"

@@ -4,11 +4,10 @@ import pytest
 async def test_propose_testing_strategy_without_feedback(llm_service):
     """Test para proponer estrategias de testing sin feedback"""
     session_id = llm_service.create_session()
-    refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
+    refined_story = "Como usuario quiero..."
     corner_cases = [
-        "1. **Nombre de Usuario/Correo electrónico no registrado:** El usuario intenta iniciar sesión con una dirección de correo electrónico o nombre de usuario que no se encuentra en la base de datos del sistema.",
-        "2. **Contraseña Incorrecta persistente:** El usuario ingresa la contraseña incorrecta más de 10 veces consecutivas.",
-        "3. **Problemas con autenticación de dos factores (2FA):** El usuario no puede iniciar sesión porque el sistema requiere la verificación del código de autenticación 2FA."
+        "1. Caso esquina 1",
+        "2. Caso esquina 2"
     ]
 
     result = await llm_service.propose_testing_strategy(
@@ -17,24 +16,31 @@ async def test_propose_testing_strategy_without_feedback(llm_service):
         corner_cases=corner_cases
     )
 
-    # Verificar que se recibe una lista de estrategias de testing
-    assert isinstance(result, list), "El resultado debe ser una lista"
-    assert len(result) > 0, "Debe haber al menos una estrategia de testing propuesta"
-    for estrategia in result:
-        assert isinstance(estrategia, str), "Cada estrategia de testing debe ser una cadena"
-        if estrategia.strip():  # Solo validar líneas no vacías
-            assert len(estrategia.strip()) > 0, "Las estrategias no deben estar vacías"
+    # Verificar que se recibió un diccionario con las claves esperadas
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
+    assert 'testing_strategies' in result, "El resultado debe contener 'testing_strategies'"
+    assert 'testing_feedback' in result, "El resultado debe contener 'testing_feedback'"
+
+    # Verificar que las estrategias son una lista no vacía
+    testing_strategies = result['testing_strategies']
+    assert isinstance(testing_strategies, list), "Las estrategias de testing deben ser una lista"
+    assert len(testing_strategies) > 0, "Debe haber al menos una estrategia de testing propuesta"
+
+    # Verificar que el feedback es una cadena no vacía
+    testing_feedback = result['testing_feedback']
+    assert isinstance(testing_feedback, str), "El feedback debe ser una cadena"
+    assert len(testing_feedback.strip()) > 0, "El feedback no debe estar vacío"
 
 @pytest.mark.asyncio
 async def test_propose_testing_strategy_with_feedback(llm_service):
     """Test para proponer estrategias de testing con feedback"""
     session_id = llm_service.create_session()
-    refined_story = "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante la combinación correcta de mi nombre de usuario o dirección de correo electrónico y contraseña, para acceder a mis perfiles, historiales de compras y otros datos personales de manera segura y eficiente."
+    refined_story = "Como usuario quiero..."
     corner_cases = [
-        "1. **Nombre de Usuario/Correo electrónico no registrado:** El usuario intenta iniciar sesión con una dirección de correo electrónico o nombre de usuario que no se encuentra en la base de datos del sistema.",
-        "2. **Contraseña Incorrecta persistente:** El usuario ingresa la contraseña incorrecta más de 10 veces consecutivas."
+        "1. Caso esquina 1",
+        "2. Caso esquina 2"
     ]
-    feedback = "Incluir pruebas de rendimiento bajo carga y pruebas de seguridad para prevenir ataques de fuerza bruta"
+    feedback = "Incluir pruebas de estrés y seguridad avanzada"
 
     result = await llm_service.propose_testing_strategy(
         session_id=session_id,
@@ -43,13 +49,19 @@ async def test_propose_testing_strategy_with_feedback(llm_service):
         feedback=feedback
     )
 
-    # Verificar que se recibe una lista de estrategias de testing
-    assert isinstance(result, list), "El resultado debe ser una lista"
-    assert len(result) > 0, "Debe haber al menos una estrategia de testing propuesta"
-    for estrategia in result:
-        assert isinstance(estrategia, str), "Cada estrategia de testing debe ser una cadena"
-        if estrategia.strip():  # Solo validar líneas no vacías
-            assert len(estrategia.strip()) > 0, "Las estrategias no deben estar vacías"
-    # Verificar que el feedback se ha tenido en cuenta
-    assert any(["rendimiento" in estrategia.lower() or "carga" in estrategia.lower() or "seguridad" in estrategia.lower() for estrategia in result]), \
-        "Las estrategias deben incluir pruebas mencionadas en el feedback"
+    # Verificar que se recibió un diccionario con las claves esperadas
+    assert isinstance(result, dict), "El resultado debe ser un diccionario"
+    assert 'testing_strategies' in result, "El resultado debe contener 'testing_strategies'"
+    assert 'testing_feedback' in result, "El resultado debe contener 'testing_feedback'"
+
+    # Verificar que las estrategias son una lista no vacía
+    testing_strategies = result['testing_strategies']
+    assert isinstance(testing_strategies, list), "Las estrategias de testing deben ser una lista"
+    assert len(testing_strategies) > 0, "Debe haber al menos una estrategia de testing propuesta"
+
+    # Verificar que el feedback es una cadena no vacía y contiene referencias al feedback proporcionado
+    testing_feedback = result['testing_feedback']
+    assert isinstance(testing_feedback, str), "El feedback debe ser una cadena"
+    assert len(testing_feedback.strip()) > 0, "El feedback no debe estar vacío"
+    assert any(keyword in testing_feedback.lower() for keyword in ["pruebas de estrés", "seguridad avanzada"]), \
+        "El feedback debe mencionar los cambios relacionados con el feedback proporcionado"

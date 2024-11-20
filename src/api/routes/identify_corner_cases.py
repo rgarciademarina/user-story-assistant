@@ -56,14 +56,22 @@ class IdentifyCornerCasesResponse(BaseModel):
             "description": "Lista de casos esquina identificados para la historia de usuario proporcionada."
         }
     )
+    corner_cases_feedback: str = Field(
+        ...,
+        json_schema_extra={
+            "description": "Resumen de los cambios realizados por el LLM."
+        }
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
+                "session_id": "123e4567-e89b-12d3-a456-426614174000",
                 "corner_cases": [
-                    "Intentos de inicio de sesión con contraseñas incorrectas.",
-                    "Acceso simultáneo desde múltiples dispositivos."
-                ]
+                    "1. **Intentos de Inicio de Sesión Fallidos:** El usuario ingresa una contraseña incorrecta repetidamente.",
+                    "2. **Bloqueo de Cuenta por Inactividad:** La cuenta está bloqueada después de un período de inactividad prolongada."
+                ],
+                "corner_cases_feedback": "Se incluyeron casos relacionados con autenticación de dos factores y bloqueos por inactividad según el feedback proporcionado."
             }
         }
     )
@@ -87,7 +95,7 @@ async def identify_corner_cases(request: IdentifyCornerCasesRequest):
         session_id = request.session_id or llm_service.create_session()
         
         # Identificar casos esquina usando el servicio LLM
-        corner_cases = await llm_service.identify_corner_cases(
+        result = await llm_service.identify_corner_cases(
             session_id=session_id,
             refined_story=request.story,
             feedback=request.feedback
@@ -95,7 +103,8 @@ async def identify_corner_cases(request: IdentifyCornerCasesRequest):
         
         return {
             "session_id": session_id,
-            "corner_cases": corner_cases
+            "corner_cases": result['corner_cases'],
+            "corner_cases_feedback": result['corner_cases_feedback']
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

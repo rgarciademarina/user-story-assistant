@@ -19,5 +19,8 @@ class SessionState(BaseModel):
     session_id: UUID
     current_state: ProcessState
     refined_story: str | None = None
+    refinement_feedback: Optional[str] = None
     corner_cases: list[str] | None = None
+    corner_cases_feedback: Optional[str] = None
     testing_strategies: Optional[list[str]] = None
+    testing_feedback: Optional[str] = None
