@@ -32,6 +32,12 @@ class ProposeTestingStrategyRequest(BaseModel):
             "description": "Lista de casos esquina identificados para la historia de usuario."
         }
     )
+    existing_testing_strategies: List[str] | None = Field(
+        None,
+        json_schema_extra={
+            "description": "Lista opcional de estrategias de testing existentes de iteraciones previas."
+        }
+    )
     feedback: str | None = Field(
         None,
         json_schema_extra={
@@ -48,7 +54,11 @@ class ProposeTestingStrategyRequest(BaseModel):
                     "Intentos de inicio de sesión con contraseñas incorrectas",
                     "Acceso simultáneo desde múltiples dispositivos"
                 ],
-                "feedback": "Incluir pruebas de rendimiento y seguridad en la estrategia de testing."
+                "feedback": "Incluir pruebas de rendimiento y seguridad en la estrategia de testing.",
+                "existing_testing_strategies": [
+                    "1. Prueba de autenticación básica",
+                    "2. Prueba de recuperación de contraseña"
+                ]
             }
         }
     )
@@ -105,6 +115,7 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
     - **story**: Historia de usuario refinada en formato de texto.
     - **corner_cases**: Lista de casos esquina identificados.
     - **feedback**: Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente.
+    - **existing_testing_strategies**: Lista opcional de estrategias de testing existentes de iteraciones previas.
     """
     try:
         # Si no hay session_id, crear una nueva sesión
@@ -115,7 +126,8 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
             session_id=session_id,
             refined_story=request.story,
             corner_cases=request.corner_cases,
-            feedback=request.feedback
+            feedback=request.feedback,
+            existing_testing_strategies=request.existing_testing_strategies
         )
         
         return {
@@ -124,4 +136,4 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
             "testing_feedback": result['testing_feedback']
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))

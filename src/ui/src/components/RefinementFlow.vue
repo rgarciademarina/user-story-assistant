@@ -3,12 +3,14 @@
     <div class="header">
       <h2>{{ currentStateLabel }}</h2>
     </div>
-    <div class="chat-container">
-      <div v-for="(message, index) in messages" :key="index">
-        <ChatMessage :message="message" />
-      </div>
-      <div v-if="isLoading" class="loading-indicator">
-        <span>Cargando...</span>
+    <div class="content-wrapper">
+      <div class="chat-container">
+        <div v-for="(message, index) in messages" :key="index">
+          <ChatMessage :message="message" />
+        </div>
+        <div v-if="isLoading" class="loading-indicator">
+          <span>Cargando...</span>
+        </div>
       </div>
     </div>
     <div class="input-container">
@@ -18,22 +20,24 @@
         :placeholder="inputPlaceholder"
         :disabled="isLoading"
       ></textarea>
-      <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
-      <button
-        v-if="backButtonLabel"
-        @click="goBack"
-        class="back-button"
-      >
-        {{ backButtonLabel }}
-      </button>
-      <button
-        v-if="currentStep !== 'finished'"
-        @click="advanceStep"
-        :class="['advance-button', advanceButtonClass]"
-        :disabled="!canAdvance"
-      >
-        {{ nextButtonLabel }}
-      </button>
+      <div class="button-group">
+        <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
+        <button
+          v-if="backButtonLabel"
+          @click="goBack"
+          class="back-button"
+        >
+          {{ backButtonLabel }}
+        </button>
+        <button
+          v-if="currentStep !== 'finished'"
+          @click="advanceStep"
+          :class="['advance-button', advanceButtonClass]"
+          :disabled="!canAdvance"
+        >
+          {{ nextButtonLabel }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -53,7 +57,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -131,15 +135,18 @@ export default {
       this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
     },
     async handleCornerCasesFeedback(feedback) {
-      const refinedStory = this.$store.state.refinedStory;
-      const payload = { refinedStory, feedback };
+      const refinedStory = this.refinedStory;
+      const existingCornerCases = this.cornerCases; // Obtenemos los casos esquina existentes
+
+      const payload = { refinedStory, feedback, existingCornerCases };
       const result = await this.identifyCornerCases(payload);
       this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
     },
     async handleTestingStrategyFeedback(feedback) {
       const refinedStory = this.$store.state.refinedStory;
       const cornerCases = this.$store.state.cornerCases;
-      const payload = { refinedStory, cornerCases, feedback };
+      const existingTestingStrategies = this.$store.state.testingStrategies;
+      const payload = { refinedStory, cornerCases, feedback, existingTestingStrategies };
       const result = await this.proposeTestingStrategy(payload);
       this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
     },
@@ -225,35 +232,70 @@ export default {
   height: 100vh;
   background-color: #1e1e1e;
   color: #fff;
+  overflow: hidden;
+  padding: 0 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
+
 .header {
-  padding: 10px;
+  padding: 1.5rem;
   text-align: center;
-  background-color: #333;
-  border-bottom: 1px solid #444;
+  background-color: #252525;
+  border-bottom: 1px solid #333;
+  margin: 0 -2rem;
 }
-.chat-container {
+
+.content-wrapper {
   flex: 1;
-  padding: 10px;
-  overflow-y: auto;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+  width: 100%;
 }
+
+.chat-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.5rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: #666 #1e1e1e;
+}
+
+.chat-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  background-color: #666;
+  border-radius: 4px;
+}
+
 .input-container {
-  display: flex;
-  padding: 10px;
-  background-color: #333;
-  align-items: center;
-  justify-content: flex-end;
+  padding: 1.5rem 0;
+  background-color: #252525;
+  border-top: 1px solid #333;
+  margin: 0 -2rem;
+  padding: 1.5rem 2rem;
 }
 .input-container textarea {
-  flex: 1;
+  width: 100%;
   resize: none;
   background-color: #2e2e2e;
   color: #fff;
   border: 1px solid #444;
   border-radius: 5px;
-  padding: 10px;
-  margin-right: 10px;
-  height: 50px;
+  padding: 1rem;
+  margin: 0 0 1rem 0;
+  min-height: 120px;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  box-sizing: border-box;
 }
 .input-container button {
   margin-left: 5px;
