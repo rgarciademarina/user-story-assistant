@@ -20,11 +20,16 @@ export default {
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  padding: 20px;
-  background-color: #f9f9f9;
+  padding: 0;
+  background-color: #1e1e1e;
+  color: #fff;
+  height: 100vh;
+  overflow: hidden;
 }
+
 #app {
-  max-width: 800px;
-  margin: 0 auto;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 </style>
