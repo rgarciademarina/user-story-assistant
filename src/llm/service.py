@@ -173,19 +173,39 @@ class LLMService:
 
         return result
 
-    async def identify_corner_cases(self, session_id: UUID, refined_story: str, feedback: str | None = None) -> Dict[str, Any]:
+    async def identify_corner_cases(
+        self,
+        session_id: UUID,
+        refined_story: str,
+        feedback: str | None = None,
+        existing_corner_cases: List[str] | None = None
+    ) -> Dict[str, Any]:
         def update_session(session, result):
             session.corner_cases = result['corner_cases']
             session.corner_cases_feedback = result['corner_cases_feedback']
 
         def format_interaction(result):
             corner_cases_formatted = '\n'.join(result['corner_cases'])
-            human_message = f"Historia refinada: {refined_story}\nFeedback: {feedback}"
-            ai_message = f"Casos esquina identificados:\n{corner_cases_formatted}\nAnálisis de Cambios:\n{result['corner_cases_feedback']}"
+            human_message = (
+                f"Historia refinada:\n"
+                f"{refined_story}\n\n"
+                f"Casos Esquina Anteriores:\n"
+                f"{chr(10).join(existing_corner_cases) if existing_corner_cases else 'No hay casos esquina previos.'}\n\n"
+                f"Feedback:\n"
+                f"{feedback or 'Sin feedback adicional.'}"
+            )
+
+            ai_message = (
+                f"Casos Esquina Actualizados:\n"
+                f"{corner_cases_formatted}\n\n"
+                f"Análisis de Cambios:\n"
+                f"{result['corner_cases_feedback']}"
+            )
+
             return human_message, ai_message
 
         def post_process_response(extracted_sections):
-            corner_cases_text = extracted_sections.get('**Casos Esquina:**', '').strip()
+            corner_cases_text = extracted_sections.get('**Casos Esquina Actualizados:**', '').strip()
             corner_cases = [case.strip() for case in corner_cases_text.split('\n') if case.strip()]
             corner_cases_feedback = extracted_sections.get('**Análisis de Cambios:**', '').strip()
             return {
@@ -195,7 +215,8 @@ class LLMService:
 
         input_vars = {
             "refined_user_story": refined_story,
-            "feedback": feedback,
+            "existing_corner_cases": '\n'.join(existing_corner_cases) if existing_corner_cases else "No hay casos esquina previos.",
+            "feedback": feedback or "Sin feedback adicional.",
         }
 
         result = await self._process_step(
@@ -203,7 +224,7 @@ class LLMService:
             chain=self.corner_case_chain,
             input_variables=input_vars,
             process_state=ProcessState.CORNER_CASES,
-            extract_markers=["**Casos Esquina:**", "**Análisis de Cambios:**"],
+            extract_markers=["**Casos Esquina Actualizados:**", "**Análisis de Cambios:**"],
             update_session_callback=update_session,
             format_interaction=format_interaction,
             post_process_response=post_process_response

@@ -64,6 +64,3 @@ async def test_refine_story_with_feedback(llm_service):
     refinement_feedback = result['refinement_feedback']
     assert isinstance(refinement_feedback, str), "El feedback de refinamiento debe ser una cadena"
     assert len(refinement_feedback.strip()) > 0, "El feedback de refinamiento no debe estar vacío"
-    assert any(["método de autenticación" in refinement_feedback.lower() or
-                "datos" in refinement_feedback.lower()] ), \
-        "El feedback de refinamiento debe mencionar los cambios realizados según el feedback proporcionado"

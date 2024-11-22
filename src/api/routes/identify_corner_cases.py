@@ -29,13 +29,22 @@ class IdentifyCornerCasesRequest(BaseModel):
             "description": "Feedback opcional del usuario sobre los casos esquina identificados anteriormente."
         }
     )
+    existing_corner_cases: List[str] | None = Field(
+        None,
+        json_schema_extra={
+            "description": "Lista opcional de casos esquina existentes de iteraciones previas."
+        }
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "story": "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante mi correo y contraseña.",
-                "feedback": "Considerar también casos de autenticación de dos factores y bloqueos de cuenta."
-            }
+                "story": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta utilizando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
+                "feedback": "Considerar casos de autenticación de dos factores y bloqueos por inactividad.",
+                "existing_corner_cases": [
+                    "1. Intentos de inicio de sesión fallidos.",
+                    "2. Acceso desde ubicaciones no reconocidas."
+                ]}
         }
     )
 
@@ -89,6 +98,7 @@ async def identify_corner_cases(request: IdentifyCornerCasesRequest):
     - **session_id**: ID de sesión opcional. Si no se proporciona, se creará una nueva sesión.
     - **story**: Historia de usuario refinada en formato de texto.
     - **feedback**: Feedback opcional del usuario sobre los casos esquina identificados anteriormente.
+    - **existing_corner_cases**: Lista opcional de casos esquina existentes de iteraciones previas.
     """
     try:
         # Si no hay session_id, crear una nueva sesión
@@ -98,7 +108,8 @@ async def identify_corner_cases(request: IdentifyCornerCasesRequest):
         result = await llm_service.identify_corner_cases(
             session_id=session_id,
             refined_story=request.story,
-            feedback=request.feedback
+            feedback=request.feedback,
+            existing_corner_cases=request.existing_corner_cases
         )
         
         return {

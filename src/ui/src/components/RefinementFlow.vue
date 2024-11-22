@@ -53,7 +53,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -131,8 +131,10 @@ export default {
       this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
     },
     async handleCornerCasesFeedback(feedback) {
-      const refinedStory = this.$store.state.refinedStory;
-      const payload = { refinedStory, feedback };
+      const refinedStory = this.refinedStory;
+      const existingCornerCases = this.cornerCases; // Obtenemos los casos esquina existentes
+
+      const payload = { refinedStory, feedback, existingCornerCases };
       const result = await this.identifyCornerCases(payload);
       this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
     },

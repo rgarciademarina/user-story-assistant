@@ -57,16 +57,23 @@ export default createStore({
       const refinementResponse = `**Historia Refinada:**\n${refinedStory}\n\n**Cambios Realizados:**\n${response.data.refinement_feedback}`;
       return { refinementResponse };
     },
-    async identifyCornerCases({ commit }, { refinedStory, feedback }) {
+    async identifyCornerCases({ commit, state }, { refinedStory, feedback }) {
+      const existingCornerCases = state.cornerCases; // Obtenemos los casos esquina existentes
+
       // Realizar la llamada al backend
       const response = await axios.post('/api/identify_corner_cases', {
         story: refinedStory,
         feedback,
+        existing_corner_cases: existingCornerCases, // Enviamos los casos esquina existentes
       });
+
       const cornerCases = response.data.corner_cases;
-      commit('setCornerCases', cornerCases);
-      const cornerCasesText = cornerCases.map((item, index) => `${index + 1}. ${item}`).join('\n');
-      const cornerCasesResponse = `**Casos Esquina Identificados:**\n${cornerCasesText}\n\n**Análisis de Cambios:**\n${response.data.corner_cases_feedback}`;
+      commit('setCornerCases', cornerCases); // Guardamos los nuevos casos esquina
+
+      const cornerCasesText = cornerCases
+        .map((item, index) => `${index + 1}. ${item}`)
+        .join('\n');
+      const cornerCasesResponse = `**Casos Esquina Actualizados:**\n${cornerCasesText}\n\n**Análisis de Cambios:**\n${response.data.corner_cases_feedback}`;
       return { cornerCasesResponse };
     },
     async proposeTestingStrategy(_, { refinedStory, cornerCases, feedback }) {
