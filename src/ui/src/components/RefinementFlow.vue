@@ -53,7 +53,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -141,7 +141,8 @@ export default {
     async handleTestingStrategyFeedback(feedback) {
       const refinedStory = this.$store.state.refinedStory;
       const cornerCases = this.$store.state.cornerCases;
-      const payload = { refinedStory, cornerCases, feedback };
+      const existingTestingStrategies = this.$store.state.testingStrategies;
+      const payload = { refinedStory, cornerCases, feedback, existingTestingStrategies };
       const result = await this.proposeTestingStrategy(payload);
       this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
     },

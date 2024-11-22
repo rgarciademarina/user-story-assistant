@@ -9,6 +9,7 @@ export default createStore({
     originalStory: '',
     refinedStory: '',
     cornerCases: [],
+    testingStrategies: [],
   },
   mutations: {
     addMessage(state, message) {
@@ -25,6 +26,9 @@ export default createStore({
     },
     setCornerCases(state, cases) {
       state.cornerCases = cases;
+    },
+    setTestingStrategies(state, testingStrategies) {
+      state.testingStrategies = testingStrategies;
     },
     resetProcess(state) {
       state.messages = [];
@@ -58,35 +62,35 @@ export default createStore({
       return { refinementResponse };
     },
     async identifyCornerCases({ commit, state }, { refinedStory, feedback }) {
-      const existingCornerCases = state.cornerCases; // Obtenemos los casos esquina existentes
+      const existingCornerCases = state.cornerCases;
 
-      // Realizar la llamada al backend
       const response = await axios.post('/api/identify_corner_cases', {
         story: refinedStory,
         feedback,
-        existing_corner_cases: existingCornerCases, // Enviamos los casos esquina existentes
+        existing_corner_cases: existingCornerCases,
       });
 
       const cornerCases = response.data.corner_cases;
-      commit('setCornerCases', cornerCases); // Guardamos los nuevos casos esquina
+      commit('setCornerCases', cornerCases);
 
-      const cornerCasesText = cornerCases
-        .map((item, index) => `${index + 1}. ${item}`)
-        .join('\n');
+      const cornerCasesText = cornerCases.join('\n');
       const cornerCasesResponse = `**Casos Esquina Actualizados:**\n${cornerCasesText}\n\n**Análisis de Cambios:**\n${response.data.corner_cases_feedback}`;
       return { cornerCasesResponse };
     },
-    async proposeTestingStrategy(_, { refinedStory, cornerCases, feedback }) {
-      // Realizar la llamada al backend
+    async proposeTestingStrategy({ commit, state }, { refinedStory, cornerCases, feedback }) {
+      const existingTestingStrategies = state.testingStrategies;
+
       const response = await axios.post('/api/propose_testing_strategy', {
         story: refinedStory,
         corner_cases: cornerCases,
         feedback,
+        existing_testing_strategies: existingTestingStrategies,
       });
+
       const testingStrategies = response.data.testing_strategies;
-      const testingStrategiesText = testingStrategies
-        .map((item, index) => `${index + 1}. ${item}`)
-        .join('\n');
+      commit('setTestingStrategies', testingStrategies);
+
+      const testingStrategiesText = testingStrategies.join('\n');
       const testingStrategyResponse = `**Estrategias de Testing Propuestas:**\n${testingStrategiesText}\n\n**Análisis de Cambios:**\n${response.data.testing_feedback}`;
       return { testingStrategyResponse };
     },

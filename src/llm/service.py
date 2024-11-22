@@ -232,20 +232,38 @@ class LLMService:
 
         return result
 
-    async def propose_testing_strategy(self, session_id: UUID, refined_story: str, corner_cases: List[str], feedback: str | None = None) -> Dict[str, Any]:
+    async def propose_testing_strategy(
+        self,
+        session_id: UUID,
+        refined_story: str,
+        corner_cases: List[str],
+        feedback: str | None = None,
+        existing_testing_strategies: List[str] | None = None
+    ) -> Dict[str, Any]:
         def update_session(session, result):
             session.testing_strategies = result['testing_strategies']
             session.testing_feedback = result['testing_feedback']
 
         def format_interaction(result):
             testing_strategies_formatted = '\n'.join(result['testing_strategies'])
-            human_message = f"Historia refinada: {refined_story}\nCasos esquina: {corner_cases}\nFeedback: {feedback}"
-            ai_message = f"Estrategias de Testing propuestas:\n{testing_strategies_formatted}\nAnálisis de Cambios:\n{result['testing_feedback']}"
+            human_message = (
+                f"Historia refinada:\n{refined_story}\n\n"
+                f"Casos Esquina:\n{'\n'.join(corner_cases)}\n\n"
+                f"Estrategias de Testing Anteriores:\n"
+                f"{'\n'.join(existing_testing_strategies) if existing_testing_strategies else 'No hay estrategias de testing previas.'}\n\n"
+                f"Feedback:\n{feedback or 'Sin feedback adicional.'}"
+            )
+
+            ai_message = (
+                f"Estrategias de Testing Actualizadas:\n{testing_strategies_formatted}\n\n"
+                f"Análisis de Cambios:\n{result['testing_feedback']}"
+            )
+
             return human_message, ai_message
 
         def post_process_response(extracted_sections):
-            testing_strategies_text = extracted_sections.get('**Estrategias de Testing:**', '').strip()
-            testing_strategies = [strategy.strip() for strategy in testing_strategies_text.split('\n') if strategy.strip()]
+            strategies_text = extracted_sections.get('**Estrategias de Testing Actualizadas:**', '').strip()
+            testing_strategies = [strategy.strip() for strategy in strategies_text.split('\n') if strategy.strip()]
             testing_feedback = extracted_sections.get('**Análisis de Cambios:**', '').strip()
             return {
                 'testing_strategies': testing_strategies,
@@ -255,15 +273,16 @@ class LLMService:
         input_vars = {
             "refined_user_story": refined_story,
             "corner_cases": '\n'.join(corner_cases),
-            "feedback": feedback,
+            "existing_testing_strategies": '\n'.join(existing_testing_strategies) if existing_testing_strategies else "No hay estrategias de testing previas.",
+            "feedback": feedback or "Sin feedback adicional.",
         }
 
         result = await self._process_step(
             session_id=session_id,
             chain=self.testing_strategy_chain,
             input_variables=input_vars,
-            process_state=ProcessState.TESTING_STRATEGY,
-            extract_markers=["**Estrategias de Testing:**", "**Análisis de Cambios:**"],
+            process_state=ProcessState.TESTING_STRATEGIES,
+            extract_markers=["**Estrategias de Testing Actualizadas:**", "**Análisis de Cambios:**"],
             update_session_callback=update_session,
             format_interaction=format_interaction,
             post_process_response=post_process_response
