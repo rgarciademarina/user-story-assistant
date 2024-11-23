@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-from src.main import app
+from src.main import app, override_llm_service
 
 @pytest.fixture
 def anyio_backend():
@@ -9,6 +9,9 @@ def anyio_backend():
 @pytest.mark.asyncio
 async def test_refine_story_endpoint(llm_service):
     """Test para el endpoint de refinamiento de historias de usuario con feedback"""
+    # Configurar el servicio mock
+    override_llm_service(llm_service)
+    
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test/api") as client:
         payload = {
             'story': 'Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal',

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
-from src.llm.instance import llm_service
+from typing import Optional, List
+from src.dependencies import get_llm_service
+from src.llm.service import LLMService
 from uuid import UUID
 
 router = APIRouter()
@@ -106,24 +107,25 @@ class ProposeTestingStrategyResponse(BaseModel):
 @router.post(
     "/propose_testing_strategy",
     response_model=ProposeTestingStrategyResponse,
-    summary="Proponer estrategias de testing para una historia de usuario",
-    tags=["Refinement"]
+    summary="Propone estrategias de testing para una historia de usuario",
+    tags=["Testing"]
 )
-async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
+async def propose_testing_strategy(
+    request: ProposeTestingStrategyRequest,
+    llm_service: LLMService = Depends(get_llm_service)
+):
     """
-    Proponer estrategias de testing basadas en una historia de usuario refinada y sus casos esquina.
+    Proponer estrategias de testing para una historia de usuario y sus casos esquina.
 
     - **session_id**: ID de sesión opcional. Si no se proporciona, se creará una nueva sesión.
-    - **story**: Historia de usuario refinada en formato de texto.
+    - **story**: Historia de usuario refinada.
     - **corner_cases**: Lista de casos esquina identificados.
-    - **feedback**: Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente.
-    - **existing_testing_strategies**: Lista opcional de estrategias de testing existentes de iteraciones previas.
+    - **feedback**: Feedback opcional del usuario sobre las estrategias anteriores.
+    - **existing_testing_strategies**: Lista opcional de estrategias de testing existentes.
     """
     try:
-        # Si no hay session_id, crear una nueva sesión
         session_id = request.session_id or llm_service.create_session()
-        
-        # Proponer estrategias usando el servicio LLM
+
         result = await llm_service.propose_testing_strategy(
             session_id=session_id,
             refined_story=request.story,
@@ -131,7 +133,7 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
             feedback=request.feedback,
             existing_testing_strategies=request.existing_testing_strategies
         )
-        
+
         return {
             "session_id": session_id,
             "testing_strategies": result['testing_strategies'],

@@ -1,7 +1,6 @@
 import pytest
-from httpx import AsyncClient
-from starlette.testclient import TestClient
-from src.main import app
+from httpx import AsyncClient, ASGITransport
+from src.main import app, override_llm_service
 from uuid import uuid4
 
 @pytest.fixture
@@ -11,6 +10,9 @@ def anyio_backend():
 @pytest.mark.asyncio
 async def test_propose_testing_strategy_endpoint(llm_service):
     """Test para el endpoint de propuesta de estrategias de testing con feedback"""
+    # Configurar el servicio mock
+    override_llm_service(llm_service)
+    
     refined_story = "Como usuario quiero..."
     corner_cases = [
         "1. Caso esquina 1",
@@ -22,8 +24,8 @@ async def test_propose_testing_strategy_endpoint(llm_service):
         'feedback': 'Incluir pruebas de estrés y seguridad avanzada'
     }
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post("/propose_testing_strategy", json=payload)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/propose_testing_strategy", json=payload)
         assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
 
         response_json = response.json()
@@ -46,6 +48,9 @@ async def test_propose_testing_strategy_endpoint(llm_service):
 @pytest.mark.asyncio
 async def test_propose_testing_strategy_endpoint_with_existing_strategies(llm_service):
     """Test para el endpoint de propuesta de estrategias de testing con estrategias previas y feedback"""
+    # Configurar el servicio mock
+    override_llm_service(llm_service)
+    
     refined_story = "Como usuario quiero..."
     corner_cases = [
         "1. Caso esquina 1",
@@ -62,8 +67,8 @@ async def test_propose_testing_strategy_endpoint_with_existing_strategies(llm_se
         'existing_testing_strategies': existing_testing_strategies
     }
 
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post("/propose_testing_strategy", json=payload)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post("/api/propose_testing_strategy", json=payload)
         assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
 
         response_json = response.json()

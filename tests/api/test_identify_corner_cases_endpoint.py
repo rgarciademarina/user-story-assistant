@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-from src.main import app
+from src.main import app, override_llm_service
 
 @pytest.fixture
 def anyio_backend():
@@ -9,6 +9,9 @@ def anyio_backend():
 @pytest.mark.asyncio
 async def test_identify_corner_cases_endpoint(llm_service):
     """Test para el endpoint de identificación de casos esquina con feedback"""
+    # Configurar el servicio mock
+    override_llm_service(llm_service)
+    
     refined_story = "Como usuario quiero..."
     payload = {
         'story': refined_story,

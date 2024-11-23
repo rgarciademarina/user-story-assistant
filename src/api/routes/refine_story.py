@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
-from src.llm.instance import llm_service
+from src.dependencies import get_llm_service
+from src.llm.service import LLMService
 from uuid import UUID
 
 router = APIRouter()
@@ -76,7 +77,10 @@ class RefineStoryResponse(BaseModel):
     summary="Refina una historia de usuario",
     tags=["Refinement"]
 )
-async def refine_story(request: RefineStoryRequest):
+async def refine_story(
+    request: RefineStoryRequest,
+    llm_service: LLMService = Depends(get_llm_service)
+):
     """
     Refinar una historia de usuario para mejorar su claridad y completitud.
 
@@ -99,4 +103,4 @@ async def refine_story(request: RefineStoryRequest):
             "refinement_feedback": result['refinement_feedback']
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
