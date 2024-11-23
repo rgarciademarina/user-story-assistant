@@ -128,15 +128,20 @@ export default {
       }
     },
     async handleRefineFeedback(feedback) {
-      const story = this.$store.state.originalStory || this.previousUserStory();
+    if (!this.$store.state.refinedStory) {
+      const payload = { story: feedback, feedback: '' };
+      const result = await this.refineStory(payload);
+      this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+      return;
+    }
+      const story = this.$store.state.refinedStory;
       const payload = { story, feedback };
       const result = await this.refineStory(payload);
-      // Agregar la respuesta del LLM al historial
       this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
     },
     async handleCornerCasesFeedback(feedback) {
-      const refinedStory = this.refinedStory;
-      const existingCornerCases = this.cornerCases; // Obtenemos los casos esquina existentes
+      const refinedStory = this.$store.state.refinedStory;
+      const existingCornerCases = this.$store.state.cornerCases; // Obtenemos los casos esquina existentes
 
       const payload = { refinedStory, feedback, existingCornerCases };
       const result = await this.identifyCornerCases(payload);

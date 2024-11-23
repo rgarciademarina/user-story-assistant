@@ -96,9 +96,9 @@ class LLMService:
         try:
             # Añadir el input original del usuario a la memoria
             if "feedback" in input_variables:
-                original_input = f"Input del usuario:\n{input_variables.get('user_story', '')}\nFeedback: {input_variables.get('feedback', 'No hay feedback')}"
+                original_input = "Input del usuario:\n{}\nFeedback: {}".format(input_variables.get('user_story', ''), input_variables.get('feedback', 'No hay feedback'))
             else:
-                original_input = f"Input del usuario:\n{input_variables.get('user_story', input_variables.get('refined_user_story', ''))}"
+                original_input = "Input del usuario:\n{}".format(input_variables.get('user_story', input_variables.get('refined_user_story', '')))
             
             memory.add_message(HumanMessage(content=original_input))
             
@@ -145,8 +145,12 @@ class LLMService:
             session.refinement_feedback = result['refinement_feedback']
 
         def format_interaction(result):
-            human_message = f"Historia original: {user_story}\nFeedback: {feedback}"
-            ai_message = f"Historia refinada: {result['refined_story']}\nCambios realizados: {result['refinement_feedback']}"
+            human_message = (
+                "Historia original:\n{}\nFeedback: {}".format(user_story, feedback)
+            )
+            ai_message = (
+                "Historia refinada:\n{}\nCambios realizados: {}".format(result['refined_story'], result['refinement_feedback'])
+            )
             return human_message, ai_message
 
         def post_process_response(extracted_sections):
@@ -187,19 +191,14 @@ class LLMService:
         def format_interaction(result):
             corner_cases_formatted = '\n'.join(result['corner_cases'])
             human_message = (
-                f"Historia refinada:\n"
-                f"{refined_story}\n\n"
-                f"Casos Esquina Anteriores:\n"
-                f"{chr(10).join(existing_corner_cases) if existing_corner_cases else 'No hay casos esquina previos.'}\n\n"
-                f"Feedback:\n"
-                f"{feedback or 'Sin feedback adicional.'}"
+                "Historia refinada:\n{}\n\n"
+                "Casos Esquina Anteriores:\n{}\n\n"
+                "Feedback:\n{}".format(refined_story, '\n'.join(existing_corner_cases) if existing_corner_cases else 'No hay casos esquina previos.', feedback or 'Sin feedback adicional.')
             )
 
             ai_message = (
-                f"Casos Esquina Actualizados:\n"
-                f"{corner_cases_formatted}\n\n"
-                f"Análisis de Cambios:\n"
-                f"{result['corner_cases_feedback']}"
+                "Casos Esquina Actualizados:\n{}\n\n"
+                "Análisis de Cambios:\n{}".format(corner_cases_formatted, result['corner_cases_feedback'])
             )
 
             return human_message, ai_message
@@ -247,16 +246,16 @@ class LLMService:
         def format_interaction(result):
             testing_strategies_formatted = '\n'.join(result['testing_strategies'])
             human_message = (
-                f"Historia refinada:\n{refined_story}\n\n"
-                f"Casos Esquina:\n{'\n'.join(corner_cases)}\n\n"
-                f"Estrategias de Testing Anteriores:\n"
-                f"{'\n'.join(existing_testing_strategies) if existing_testing_strategies else 'No hay estrategias de testing previas.'}\n\n"
-                f"Feedback:\n{feedback or 'Sin feedback adicional.'}"
+                "Historia refinada:\n{}\n\n"
+                "Casos Esquina:\n{}\n\n"
+                "Estrategias de Testing Anteriores:\n"
+                "{}\n\n"
+                "Feedback:\n{}".format(refined_story, '\n'.join(corner_cases), '\n'.join(existing_testing_strategies) if existing_testing_strategies else 'No hay estrategias de testing previas.', feedback or 'Sin feedback adicional.')
             )
 
             ai_message = (
-                f"Estrategias de Testing Actualizadas:\n{testing_strategies_formatted}\n\n"
-                f"Análisis de Cambios:\n{result['testing_feedback']}"
+                "Estrategias de Testing Actualizadas:\n{}\n\n"
+                "Análisis de Cambios:\n{}".format(testing_strategies_formatted, result['testing_feedback'])
             )
 
             return human_message, ai_message
@@ -281,7 +280,7 @@ class LLMService:
             session_id=session_id,
             chain=self.testing_strategy_chain,
             input_variables=input_vars,
-            process_state=ProcessState.TESTING_STRATEGIES,
+            process_state=ProcessState.TESTING_STRATEGY,
             extract_markers=["**Estrategias de Testing Actualizadas:**", "**Análisis de Cambios:**"],
             update_session_callback=update_session,
             format_interaction=format_interaction,
