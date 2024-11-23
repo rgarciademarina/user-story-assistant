@@ -40,6 +40,7 @@ export default createStore({
       state.originalStory = '';
       state.refinedStory = '';
       state.cornerCases = [];
+      state.testingStrategies = [];
       state.sessionId = null;
     },
   },
