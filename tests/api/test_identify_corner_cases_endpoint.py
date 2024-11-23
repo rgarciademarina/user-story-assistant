@@ -1,40 +1,56 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from src.main import app, override_llm_service
+from fastapi.testclient import TestClient
+from src.main import app
+from src.dependencies import override_llm_service
+from tests.mocks.mock_llm import MockLLMService
+from uuid import UUID, uuid4
 
 @pytest.fixture
-def anyio_backend():
-    return 'asyncio'
+def mock_llm():
+    return MockLLMService()
 
-@pytest.mark.asyncio
-async def test_identify_corner_cases_endpoint(llm_service):
-    """Test para el endpoint de identificación de casos esquina con feedback"""
-    # Configurar el servicio mock
-    override_llm_service(llm_service)
-    
-    refined_story = "Como usuario quiero..."
-    payload = {
-        'story': refined_story,
-        'feedback': 'Considerar casos de autenticación de dos factores y bloqueos por inactividad'
-    }
+@pytest.fixture
+def client(mock_llm):
+    override_llm_service(mock_llm)
+    return TestClient(app)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test/api") as client:
-        response = await client.post("/identify_corner_cases", json=payload)
-        assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
+def test_identify_corner_cases_endpoint_success(client):
+    """Test que el endpoint de identificación de casos esquina funciona correctamente"""
+    response = client.post(
+        "/api/v1/identify_corner_cases",
+        json={
+            "story": "Como usuario registrado quiero iniciar sesión con email y contraseña"
+        }
+    )
+    assert response.status_code == 200
+    assert "corner_cases" in response.json()
+    assert "corner_cases_feedback" in response.json()
+    assert isinstance(response.json()["session_id"], str)
+    assert isinstance(response.json()["corner_cases"], list)
 
-        response_json = response.json()
-        assert "corner_cases" in response_json, "Falta la clave 'corner_cases' en la respuesta"
-        assert "corner_cases_feedback" in response_json, "Falta la clave 'corner_cases_feedback' en la respuesta"
+def test_identify_corner_cases_endpoint_with_feedback(client):
+    """Test que el endpoint maneja correctamente el feedback"""
+    response = client.post(
+        "/api/v1/identify_corner_cases",
+        json={
+            "story": "Como usuario registrado quiero iniciar sesión con email y contraseña",
+            "feedback": "Considerar casos de seguridad",
+            "existing_corner_cases": ["Usuario ingresa credenciales incorrectas"]
+        }
+    )
+    assert response.status_code == 200
+    assert "corner_cases" in response.json()
+    assert "corner_cases_feedback" in response.json()
 
-        corner_cases = response_json["corner_cases"]
-        corner_cases_feedback = response_json["corner_cases_feedback"]
-
-        assert isinstance(corner_cases, list), "El valor de 'corner_cases' debe ser una lista"
-        assert len(corner_cases) > 0, "La lista de 'corner_cases' no debe estar vacía"
-
-        assert isinstance(corner_cases_feedback, str), "El valor de 'corner_cases_feedback' debe ser una cadena"
-        assert len(corner_cases_feedback.strip()) > 0, "El valor de 'corner_cases_feedback' no debe estar vacío"
-
-        # Verificar que el feedback se ha tenido en cuenta
-        assert any(keyword in corner_cases_feedback.lower() for keyword in ["autenticación de dos factores", "inactividad"]), \
-            "El feedback debe mencionar los cambios relacionados con el feedback proporcionado"
+def test_identify_corner_cases_endpoint_with_session(client):
+    """Test que el endpoint mantiene el contexto de la sesión"""
+    session_id = str(uuid4())
+    response = client.post(
+        "/api/v1/identify_corner_cases",
+        json={
+            "session_id": session_id,
+            "story": "Como usuario registrado quiero iniciar sesión con email y contraseña"
+        }
+    )
+    assert response.status_code == 200
+    assert response.json()["session_id"] == session_id

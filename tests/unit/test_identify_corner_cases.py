@@ -2,12 +2,12 @@ import pytest
 from uuid import UUID
 
 @pytest.mark.asyncio
-async def test_identify_corner_cases_without_feedback(llm_service):
+async def test_identify_corner_cases_without_feedback(mock_llm_service):
     """Test para identificar casos esquina sin feedback"""
-    session_id = llm_service.create_session()
+    session_id = mock_llm_service.create_session()
     refined_story = "Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal"
 
-    result = await llm_service.identify_corner_cases(
+    result = await mock_llm_service.identify_corner_cases(
         session_id=session_id,
         refined_story=refined_story
     )
@@ -25,13 +25,13 @@ async def test_identify_corner_cases_without_feedback(llm_service):
     assert len(feedback.strip()) > 0
 
 @pytest.mark.asyncio
-async def test_identify_corner_cases_with_feedback(llm_service):
+async def test_identify_corner_cases_with_feedback(mock_llm_service):
     """Test para identificar casos esquina con feedback"""
-    session_id = llm_service.create_session()
+    session_id = mock_llm_service.create_session()
     refined_story = "Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal"
     feedback = "Considerar casos de seguridad y validación"
 
-    result = await llm_service.identify_corner_cases(
+    result = await mock_llm_service.identify_corner_cases(
         session_id=session_id,
         refined_story=refined_story,
         feedback=feedback
@@ -51,9 +51,9 @@ async def test_identify_corner_cases_with_feedback(llm_service):
     assert len(corner_cases_feedback.strip()) > 0
 
 @pytest.mark.asyncio
-async def test_identify_corner_cases_with_existing_cases(llm_service):       
+async def test_identify_corner_cases_with_existing_cases(mock_llm_service):       
     """Test para identificar casos esquina utilizando casos previos y feedback"""
-    session_id = llm_service.create_session()
+    session_id = mock_llm_service.create_session()
     refined_story = "Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal"
     existing_corner_cases = [
         "1. **Intentos de Inicio de Sesión Fallidos:** El usuario ingresa una contraseña incorrecta repetidamente.",
@@ -61,7 +61,7 @@ async def test_identify_corner_cases_with_existing_cases(llm_service):
     ]
     feedback = "Considerar casos de bloqueo de cuenta"
 
-    result = await llm_service.identify_corner_cases(
+    result = await mock_llm_service.identify_corner_cases(
         session_id=session_id,
         refined_story=refined_story,
         feedback=feedback,

@@ -2,6 +2,8 @@ from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
 from langchain.schema import LLMResult, Generation
 from typing import Any, List, Optional, Dict, Union
+from src.llm.service import LLMService
+from uuid import UUID, uuid4
 
 class MockOllamaLLM(LLM):
     """Mock para OllamaLLM que retorna respuestas predefinidas"""
@@ -69,21 +71,15 @@ Como usuario registrado, quiero poder iniciar sesión en mi cuenta utilizando mi
             return """**Casos Esquina Actualizados:**
 1. **Intentos de Inicio de Sesión Fallidos:** El usuario ingresa una contraseña incorrecta repetidamente.
 2. **Acceso desde Ubicaciones No Reconocidas:** Intentos de inicio de sesión desde ubicaciones geográficas inusuales.
-3. **Bloqueo por Inactividad:** La sesión expira después de un período sin actividad.
+3. **Bloqueo por Inactividad:** La sesión expira después de un período sin actividad."""
 
-**Análisis de Cambios:**
-Los casos cubren escenarios críticos de seguridad, autenticación y manejo de sesiones."""
-        
         # Respuesta para estrategias de testing
         elif "estrategias de testing" in prompt.lower() and "actualiza y mejora la lista de estrategias de testing" in prompt.lower():
             return """**Estrategias de Testing Actualizadas:**
 1. **Pruebas de Autenticación:** Verificar el proceso de inicio de sesión con diferentes credenciales.
 2. **Pruebas de Seguridad:** Validar el manejo de sesiones y tokens de acceso.
-3. **Pruebas de Rendimiento:** Evaluar el sistema bajo carga de múltiples inicios de sesión simultáneos.
+3. **Pruebas de Rendimiento:** Evaluar el sistema bajo carga de múltiples inicios de sesión simultáneos."""
 
-**Análisis de Cambios:**
-Las pruebas cubren aspectos esenciales de autenticación, seguridad y rendimiento."""
-        
         else:
             print("[MockOllamaLLM] ¡ADVERTENCIA! No se encontró un caso que coincida con el prompt")
             print(f"[MockOllamaLLM] Prompt recibido: {prompt[:200]}...")
@@ -119,3 +115,96 @@ Las pruebas cubren aspectos esenciales de autenticación, seguridad y rendimient
             return responses
         else:
             raise ValueError(f"Input type {type(input)} not supported")
+
+class MockLLMService(LLMService):
+    """Mock del servicio LLM para pruebas"""
+
+    def __init__(self):
+        """Inicializar el servicio mock"""
+        self._mock_llm = MockOllamaLLM()
+        self._sessions = {}
+
+    def create_session(self) -> UUID:
+        """Crear una nueva sesión"""
+        session_id = uuid4()
+        self._sessions[session_id] = {"history": []}
+        return session_id
+
+    async def refine_story(
+        self,
+        session_id: UUID,
+        user_story: str,
+        feedback: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Mock para refinar una historia de usuario"""
+        prompt = f"Refina la historia de usuario: {user_story}"
+        if feedback:
+            prompt += f"\nFeedback: {feedback}"
+        
+        response = await self._mock_llm._acall(prompt)
+        return {
+            "refined_story": response,
+            "refinement_feedback": "Feedback mock del refinamiento"
+        }
+
+    async def identify_corner_cases(
+        self,
+        session_id: UUID,
+        refined_story: str,
+        feedback: Optional[str] = None,
+        existing_corner_cases: Optional[List[str]] = None
+    ) -> Dict[str, Union[List[str], str]]:
+        """Mock para identificar casos esquina"""
+        prompt = f"Analiza los casos esquina para la historia: {refined_story}"
+        if feedback:
+            prompt += f"\nFeedback: {feedback}"
+        if existing_corner_cases:
+            prompt += f"\nCasos existentes: {existing_corner_cases}"
+        
+        response = await self._mock_llm._acall(prompt)
+        
+        # Generar casos esquina realistas
+        corner_cases = [
+            "1. **Intentos de Inicio de Sesión Fallidos:** El usuario ingresa una contraseña incorrecta repetidamente.",
+            "2. **Acceso desde Ubicaciones No Reconocidas:** Intentos de inicio de sesión desde ubicaciones geográficas inusuales.",
+            "3. **Bloqueo por Inactividad:** La sesión expira después de un período sin actividad.",
+            "4. **Fuerza Bruta:** Intentos automatizados de acceso usando diccionarios de contraseñas."
+        ]
+        
+        return {
+            "corner_cases": corner_cases,
+            "corner_cases_feedback": "Se han identificado casos esquina relacionados con seguridad, autenticación y manejo de sesiones."
+        }
+
+    async def propose_testing_strategy(
+        self,
+        session_id: UUID,
+        refined_story: str,
+        corner_cases: List[str],
+        feedback: Optional[str] = None,
+        existing_testing_strategies: Optional[List[str]] = None
+    ) -> Dict[str, Union[List[str], str]]:
+        """Mock para proponer estrategias de testing"""
+        prompt = f"Propón estrategias de testing para la historia: {refined_story}"
+        if feedback:
+            prompt += f"\nFeedback: {feedback}"
+        if existing_testing_strategies:
+            prompt += f"\nEstrategias existentes: {existing_testing_strategies}"
+        
+        response = await self._mock_llm._acall(prompt)
+        
+        # Generar estrategias de prueba realistas
+        strategies = [
+            "1. **Pruebas de Autenticación:** Verificar el proceso de inicio de sesión con credenciales válidas e inválidas.",
+            "2. **Pruebas de Seguridad:** Validar la protección contra accesos no autorizados y ataques de fuerza bruta.",
+            "3. **Pruebas de Manejo de Sesiones:** Comprobar el control de acceso y expiración de sesiones por inactividad.",
+            "4. **Pruebas de Rendimiento:** Evaluar el sistema bajo carga con múltiples autenticaciones simultáneas."
+        ]
+
+        if feedback and "integración" in feedback.lower():
+            strategies.append("5. **Pruebas de Integración:** Verificar la integración correcta con el sistema de autenticación y servicios externos.")
+        
+        return {
+            "testing_strategies": strategies,
+            "testing_feedback": "Se han definido estrategias que cubren aspectos de seguridad, rendimiento y funcionalidad del sistema."
+        }

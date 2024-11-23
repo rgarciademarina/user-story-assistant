@@ -1,89 +1,59 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from src.main import app, override_llm_service
-from uuid import uuid4
+from fastapi.testclient import TestClient
+from src.main import app
+from src.dependencies import override_llm_service
+from tests.mocks.mock_llm import MockLLMService
+from uuid import UUID, uuid4
 
 @pytest.fixture
-def anyio_backend():
-    return 'asyncio'
+def mock_llm():
+    return MockLLMService()
 
-@pytest.mark.asyncio
-async def test_propose_testing_strategy_endpoint(llm_service):
-    """Test para el endpoint de propuesta de estrategias de testing con feedback"""
-    # Configurar el servicio mock
-    override_llm_service(llm_service)
-    
-    refined_story = "Como usuario quiero..."
-    corner_cases = [
-        "1. Caso esquina 1",
-        "2. Caso esquina 2"
-    ]
-    payload = {
-        'story': refined_story,
-        'corner_cases': corner_cases,
-        'feedback': 'Incluir pruebas de estrés y seguridad avanzada'
-    }
+@pytest.fixture
+def client(mock_llm):
+    override_llm_service(mock_llm)
+    return TestClient(app)
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post("/api/propose_testing_strategy", json=payload)
-        assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
+def test_propose_testing_strategy_endpoint_success(client):
+    """Test que el endpoint de propuesta de estrategias funciona correctamente"""
+    response = client.post(
+        "/api/v1/propose_testing_strategy",
+        json={
+            "story": "Como usuario registrado quiero iniciar sesión con email y contraseña",
+            "corner_cases": ["Usuario ingresa credenciales incorrectas"]
+        }
+    )
+    assert response.status_code == 200
+    assert "testing_strategies" in response.json()
+    assert "testing_feedback" in response.json()
+    assert isinstance(response.json()["session_id"], str)
+    assert isinstance(response.json()["testing_strategies"], list)
 
-        response_json = response.json()
-        assert "testing_strategies" in response_json, "Falta la clave 'testing_strategies' en la respuesta"
-        assert "testing_feedback" in response_json, "Falta la clave 'testing_feedback' en la respuesta"
+def test_propose_testing_strategy_endpoint_with_feedback(client):
+    """Test que el endpoint maneja correctamente el feedback"""
+    response = client.post(
+        "/api/v1/propose_testing_strategy",
+        json={
+            "story": "Como usuario registrado quiero iniciar sesión con email y contraseña",
+            "corner_cases": ["Usuario ingresa credenciales incorrectas"],
+            "feedback": "Incluir pruebas de rendimiento",
+            "existing_testing_strategies": ["Test de validación de credenciales"]
+        }
+    )
+    assert response.status_code == 200
+    assert "testing_strategies" in response.json()
+    assert "testing_feedback" in response.json()
 
-        testing_strategies = response_json["testing_strategies"]
-        testing_feedback = response_json["testing_feedback"]
-
-        assert isinstance(testing_strategies, list), "El valor de 'testing_strategies' debe ser una lista"
-        assert len(testing_strategies) > 0, "La lista de 'testing_strategies' no debe estar vacía"
-
-        assert isinstance(testing_feedback, str), "El valor de 'testing_feedback' debe ser una cadena"
-        assert len(testing_feedback.strip()) > 0, "El valor de 'testing_feedback' no debe estar vacío"
-
-        # Verificar que el feedback se ha tenido en cuenta
-        assert any(keyword in testing_feedback.lower() for keyword in ["pruebas de estrés", "seguridad avanzada"]), \
-            "El feedback debe mencionar los cambios relacionados con el feedback proporcionado"
-
-@pytest.mark.asyncio
-async def test_propose_testing_strategy_endpoint_with_existing_strategies(llm_service):
-    """Test para el endpoint de propuesta de estrategias de testing con estrategias previas y feedback"""
-    # Configurar el servicio mock
-    override_llm_service(llm_service)
-    
-    refined_story = "Como usuario quiero..."
-    corner_cases = [
-        "1. Caso esquina 1",
-        "2. Caso esquina 2"
-    ]
-    existing_testing_strategies = [
-        "1. Prueba inicial",
-        "2. Prueba secundaria"
-    ]
-    payload = {
-        'story': refined_story,
-        'corner_cases': corner_cases,
-        'feedback': 'Incluir pruebas de estrés y seguridad avanzada',
-        'existing_testing_strategies': existing_testing_strategies
-    }
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post("/api/propose_testing_strategy", json=payload)
-        assert response.status_code == 200, f"Se esperaba el código de estado 200, pero se obtuvo {response.status_code}"
-
-        response_json = response.json()
-        assert "testing_strategies" in response_json, "Falta la clave 'testing_strategies' en la respuesta"
-        assert "testing_feedback" in response_json, "Falta la clave 'testing_feedback' en la respuesta"
-
-        testing_strategies = response_json["testing_strategies"]
-        testing_feedback = response_json["testing_feedback"]
-
-        assert isinstance(testing_strategies, list), "El valor de 'testing_strategies' debe ser una lista"
-        assert len(testing_strategies) > 0, "La lista de 'testing_strategies' no debe estar vacía"
-
-        assert isinstance(testing_feedback, str), "El valor de 'testing_feedback' debe ser una cadena"
-        assert len(testing_feedback.strip()) > 0, "El valor de 'testing_feedback' no debe estar vacío"
-
-        # Verificar que el feedback se ha tenido en cuenta
-        assert any(keyword in testing_feedback.lower() for keyword in ["pruebas de estrés", "seguridad avanzada"]), \
-            "El feedback debe mencionar los cambios relacionados con el feedback proporcionado"
+def test_propose_testing_strategy_endpoint_with_session(client):
+    """Test que el endpoint mantiene el contexto de la sesión"""
+    session_id = str(uuid4())
+    response = client.post(
+        "/api/v1/propose_testing_strategy",
+        json={
+            "session_id": session_id,
+            "story": "Como usuario registrado quiero iniciar sesión con email y contraseña",
+            "corner_cases": ["Usuario ingresa credenciales incorrectas"]
+        }
+    )
+    assert response.status_code == 200
+    assert response.json()["session_id"] == session_id

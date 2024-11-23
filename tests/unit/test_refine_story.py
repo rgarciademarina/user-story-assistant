@@ -1,13 +1,13 @@
 import pytest
-from uuid import UUID
+from uuid import uuid4
 
 @pytest.mark.asyncio
-async def test_refine_story_without_feedback(llm_service):
+async def test_refine_story_without_feedback(mock_llm_service):
     """Test para refinar una historia de usuario sin feedback"""
-    session_id = llm_service.create_session()
+    session_id = mock_llm_service.create_session()
     user_story = "Como usuario quiero poder iniciar sesión"
 
-    result = await llm_service.refine_story(
+    result = await mock_llm_service.refine_story(
         session_id=session_id,
         user_story=user_story
     )
@@ -25,13 +25,13 @@ async def test_refine_story_without_feedback(llm_service):
     assert len(feedback.strip()) > 0
 
 @pytest.mark.asyncio
-async def test_refine_story_with_feedback(llm_service):
+async def test_refine_story_with_feedback(mock_llm_service):
     """Test para refinar una historia de usuario con feedback"""
-    session_id = llm_service.create_session()
+    session_id = mock_llm_service.create_session()
     user_story = "Como usuario quiero poder iniciar sesión"
     feedback = "Especificar el propósito del inicio de sesión"
 
-    result = await llm_service.refine_story(
+    result = await mock_llm_service.refine_story(
         session_id=session_id,
         user_story=user_story,
         feedback=feedback
@@ -51,14 +51,14 @@ async def test_refine_story_with_feedback(llm_service):
     assert len(refinement_feedback.strip()) > 0
 
 @pytest.mark.asyncio
-async def test_refine_story_with_existing_story(llm_service):
+async def test_refine_story_with_existing_story(mock_llm_service):
     """Test para refinar una historia de usuario con una versión previa y feedback"""
-    session_id = llm_service.create_session()
+    session_id = mock_llm_service.create_session()
     user_story = "Como usuario quiero poder iniciar sesión"
     feedback = "Agregar detalles sobre el método de autenticación"
 
     # Primera refinación
-    result1 = await llm_service.refine_story(
+    result1 = await mock_llm_service.refine_story(
         session_id=session_id,
         user_story=user_story,
         feedback=feedback
@@ -66,7 +66,7 @@ async def test_refine_story_with_existing_story(llm_service):
 
     # Segunda refinación con feedback adicional
     feedback2 = "Especificar también el nivel de seguridad requerido"
-    result2 = await llm_service.refine_story(
+    result2 = await mock_llm_service.refine_story(
         session_id=session_id,
         user_story=result1['refined_story'],
         feedback=feedback2
