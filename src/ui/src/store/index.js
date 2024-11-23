@@ -82,11 +82,23 @@ export default createStore({
     async identifyCornerCases({ commit, state }, { refinedStory, feedback }) {
       const existingCornerCases = state.cornerCases;
 
-      const response = await axios.post('/api/identify_corner_cases', {
+      // Preparar el payload incluyendo el session_id
+      const payload = {
         story: refinedStory,
         feedback,
-        existing_corner_cases: existingCornerCases,
-      });
+        existing_corner_cases: existingCornerCases
+      };
+      
+      if (state.sessionId) {
+        payload.session_id = state.sessionId;
+      }
+
+      const response = await axios.post('/api/identify_corner_cases', payload);
+
+      // Mantener el session_id actualizado si el backend lo devuelve
+      if (response.data.session_id) {
+        commit('setSessionId', response.data.session_id);
+      }
 
       const cornerCases = response.data.corner_cases;
       commit('setCornerCases', cornerCases);
@@ -98,12 +110,24 @@ export default createStore({
     async proposeTestingStrategy({ commit, state }, { refinedStory, cornerCases, feedback }) {
       const existingTestingStrategies = state.testingStrategies;
 
-      const response = await axios.post('/api/propose_testing_strategy', {
+      // Preparar el payload incluyendo el session_id
+      const payload = {
         story: refinedStory,
         corner_cases: cornerCases,
         feedback,
-        existing_testing_strategies: existingTestingStrategies,
-      });
+        existing_testing_strategies: existingTestingStrategies
+      };
+      
+      if (state.sessionId) {
+        payload.session_id = state.sessionId;
+      }
+
+      const response = await axios.post('/api/propose_testing_strategy', payload);
+
+      // Mantener el session_id actualizado si el backend lo devuelve
+      if (response.data.session_id) {
+        commit('setSessionId', response.data.session_id);
+      }
 
       const testingStrategies = response.data.testing_strategies;
       commit('setTestingStrategies', testingStrategies);

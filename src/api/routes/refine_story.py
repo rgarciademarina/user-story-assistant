@@ -1,14 +1,13 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ConfigDict
-from src.llm.service import LLMService
-from src.llm.config import get_llm_config
+from typing import Optional
+from src.llm.instance import llm_service
 from uuid import UUID
 
 router = APIRouter()
-llm_service = LLMService(get_llm_config())
 
 class RefineStoryRequest(BaseModel):
-    session_id: UUID | None = Field(
+    session_id: Optional[UUID] = Field(
         None,
         json_schema_extra={
             "description": "ID de sesión para mantener el contexto de la conversación. Si no se proporciona, se creará una nueva sesión."
@@ -21,10 +20,10 @@ class RefineStoryRequest(BaseModel):
             "description": "Descripción detallada de la historia de usuario que desea refinar."
         }
     )
-    feedback: str | None = Field(
+    feedback: Optional[str] = Field(
         None,
         json_schema_extra={
-            "example": "La historia debería especificar el método de autenticación y los datos a los que se accederá.",
+            "example": "Por favor, especificar el método de autenticación.",
             "description": "Feedback opcional del usuario sobre la historia refinada anterior."
         }
     )
@@ -33,7 +32,7 @@ class RefineStoryRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "story": "Como usuario quiero poder iniciar sesión para acceder a mi cuenta personal.",
-                "feedback": "La historia debería especificar el método de autenticación y los datos a los que se accederá."
+                "feedback": "Por favor, especificar el método de autenticación."
             }
         }
     )
