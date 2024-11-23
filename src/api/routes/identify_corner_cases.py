@@ -1,38 +1,42 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import Optional, List
+from src.dependencies import get_llm_service
 from src.llm.service import LLMService
-from src.llm.config import get_llm_config
 from uuid import UUID
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-llm_service = LLMService(get_llm_config())
 
 class IdentifyCornerCasesRequest(BaseModel):
-    session_id: UUID | None = Field(
+    session_id: Optional[UUID] = Field(
         None,
-        json_schema_extra={
-            "description": "ID de sesión para mantener el contexto de la conversación. Si no se proporciona, se creará una nueva sesión."
-        }
+        description="ID de sesión para mantener el contexto de la conversación. Si no se proporciona, se creará una nueva sesión."
     )
     story: str = Field(
         ...,
         json_schema_extra={
-            "example": "Como usuario registrado, quiero poder iniciar sesión en la plataforma mediante mi correo y contraseña.",
-            "description": "Historia de usuario refinada en formato de texto."
+            "example": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
+            "description": "Historia de usuario refinada que se analizará para identificar casos esquina."
         }
     )
-    feedback: str | None = Field(
+    feedback: Optional[str] = Field(
         None,
         json_schema_extra={
-            "example": "Considerar también casos de autenticación de dos factores y bloqueos de cuenta.",
+            "example": "Por favor, considerar casos de seguridad y validación de datos.",
             "description": "Feedback opcional del usuario sobre los casos esquina identificados anteriormente."
         }
     )
-    existing_corner_cases: List[str] | None = Field(
-        None,
+    existing_corner_cases: List[str] = Field(
+        default=[],
         json_schema_extra={
-            "description": "Lista opcional de casos esquina existentes de iteraciones previas."
+            "example": [
+                "1. Intentos de inicio de sesión con credenciales incorrectas.",
+                "2. Bloqueo de cuenta por múltiples intentos fallidos."
+            ],
+            "description": "Lista de casos esquina existentes de iteraciones previas."
         }
     )
 
@@ -88,34 +92,36 @@ class IdentifyCornerCasesResponse(BaseModel):
 @router.post(
     "/identify_corner_cases",
     response_model=IdentifyCornerCasesResponse,
-    summary="Identifica casos esquina en una historia de usuario",
-    tags=["Refinement"]
+    summary="Identifica casos esquina para una historia de usuario",
+    tags=["Corner Cases"]
 )
-async def identify_corner_cases(request: IdentifyCornerCasesRequest):
+async def identify_corner_cases(
+    request: IdentifyCornerCasesRequest,
+    llm_service: LLMService = Depends(get_llm_service)
+):
     """
-    Identificar posibles escenarios límite o riesgos en una historia de usuario refinada.
+    Identificar casos esquina para una historia de usuario.
 
     - **session_id**: ID de sesión opcional. Si no se proporciona, se creará una nueva sesión.
-    - **story**: Historia de usuario refinada en formato de texto.
-    - **feedback**: Feedback opcional del usuario sobre los casos esquina identificados anteriormente.
-    - **existing_corner_cases**: Lista opcional de casos esquina existentes de iteraciones previas.
+    - **story**: Historia de usuario refinada.
+    - **feedback**: Feedback opcional del usuario sobre los casos esquina anteriores.
+    - **existing_corner_cases**: Lista opcional de casos esquina existentes.
     """
     try:
-        # Si no hay session_id, crear una nueva sesión
         session_id = request.session_id or llm_service.create_session()
-        
-        # Identificar casos esquina usando el servicio LLM
+
         result = await llm_service.identify_corner_cases(
             session_id=session_id,
             refined_story=request.story,
             feedback=request.feedback,
             existing_corner_cases=request.existing_corner_cases
         )
-        
+
         return {
             "session_id": session_id,
             "corner_cases": result['corner_cases'],
             "corner_cases_feedback": result['corner_cases_feedback']
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        logger.error(f"Error al identificar casos esquina: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

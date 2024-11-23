@@ -1,15 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import Optional, List
+from src.dependencies import get_llm_service
 from src.llm.service import LLMService
-from src.llm.config import get_llm_config
 from uuid import UUID
 
 router = APIRouter()
-llm_service = LLMService(get_llm_config())
 
 class ProposeTestingStrategyRequest(BaseModel):
-    session_id: UUID | None = Field(
+    session_id: Optional[UUID] = Field(
         None,
         json_schema_extra={
             "description": "ID de sesión para mantener el contexto de la conversación. Si no se proporciona, se creará una nueva sesión."
@@ -19,30 +18,34 @@ class ProposeTestingStrategyRequest(BaseModel):
         ...,
         json_schema_extra={
             "example": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
-            "description": "Historia de usuario refinada para la propuesta de estrategias de testing."
+            "description": "Historia de usuario refinada para la que se propondrán estrategias de testing."
         }
     )
     corner_cases: List[str] = Field(
         ...,
         json_schema_extra={
             "example": [
-                "Intentos de inicio de sesión con contraseñas incorrectas",
-                "Acceso simultáneo desde múltiples dispositivos"
+                "1. Intentos de inicio de sesión con credenciales incorrectas.",
+                "2. Bloqueo de cuenta por múltiples intentos fallidos."
             ],
             "description": "Lista de casos esquina identificados para la historia de usuario."
         }
     )
-    existing_testing_strategies: List[str] | None = Field(
+    feedback: Optional[str] = Field(
         None,
         json_schema_extra={
-            "description": "Lista opcional de estrategias de testing existentes de iteraciones previas."
+            "example": "Por favor, incluir pruebas de rendimiento y seguridad.",
+            "description": "Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente."
         }
     )
-    feedback: str | None = Field(
-        None,
+    existing_testing_strategies: List[str] = Field(
+        default=[],
         json_schema_extra={
-            "example": "Incluir pruebas de rendimiento y seguridad en la estrategia de testing.",
-            "description": "Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente."
+            "example": [
+                "1. Pruebas de autenticación con credenciales válidas e inválidas.",
+                "2. Pruebas de bloqueo de cuenta después de múltiples intentos fallidos."
+            ],
+            "description": "Lista de estrategias de testing existentes de iteraciones previas."
         }
     )
 
@@ -51,7 +54,7 @@ class ProposeTestingStrategyRequest(BaseModel):
             "example": {
                 "story": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.",
                 "corner_cases": [
-                    "Intentos de inicio de sesión con contraseñas incorrectas",
+                    "Intentos de inicio de sesión con credenciales incorrectas",
                     "Acceso simultáneo desde múltiples dispositivos"
                 ],
                 "feedback": "Incluir pruebas de rendimiento y seguridad en la estrategia de testing.",
@@ -104,24 +107,25 @@ class ProposeTestingStrategyResponse(BaseModel):
 @router.post(
     "/propose_testing_strategy",
     response_model=ProposeTestingStrategyResponse,
-    summary="Proponer estrategias de testing para una historia de usuario",
-    tags=["Refinement"]
+    summary="Propone estrategias de testing para una historia de usuario",
+    tags=["Testing"]
 )
-async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
+async def propose_testing_strategy(
+    request: ProposeTestingStrategyRequest,
+    llm_service: LLMService = Depends(get_llm_service)
+):
     """
-    Proponer estrategias de testing basadas en una historia de usuario refinada y sus casos esquina.
+    Proponer estrategias de testing para una historia de usuario y sus casos esquina.
 
     - **session_id**: ID de sesión opcional. Si no se proporciona, se creará una nueva sesión.
-    - **story**: Historia de usuario refinada en formato de texto.
+    - **story**: Historia de usuario refinada.
     - **corner_cases**: Lista de casos esquina identificados.
-    - **feedback**: Feedback opcional del usuario sobre las estrategias de testing propuestas anteriormente.
-    - **existing_testing_strategies**: Lista opcional de estrategias de testing existentes de iteraciones previas.
+    - **feedback**: Feedback opcional del usuario sobre las estrategias anteriores.
+    - **existing_testing_strategies**: Lista opcional de estrategias de testing existentes.
     """
     try:
-        # Si no hay session_id, crear una nueva sesión
         session_id = request.session_id or llm_service.create_session()
-        
-        # Proponer estrategias usando el servicio LLM
+
         result = await llm_service.propose_testing_strategy(
             session_id=session_id,
             refined_story=request.story,
@@ -129,7 +133,7 @@ async def propose_testing_strategy(request: ProposeTestingStrategyRequest):
             feedback=request.feedback,
             existing_testing_strategies=request.existing_testing_strategies
         )
-        
+
         return {
             "session_id": session_id,
             "testing_strategies": result['testing_strategies'],

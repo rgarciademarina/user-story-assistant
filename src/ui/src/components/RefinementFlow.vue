@@ -128,15 +128,20 @@ export default {
       }
     },
     async handleRefineFeedback(feedback) {
-      const story = this.$store.state.originalStory || this.previousUserStory();
+    if (!this.$store.state.refinedStory) {
+      const payload = { story: feedback, feedback: '' };
+      const result = await this.refineStory(payload);
+      this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+      return;
+    }
+      const story = this.$store.state.refinedStory;
       const payload = { story, feedback };
       const result = await this.refineStory(payload);
-      // Agregar la respuesta del LLM al historial
       this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
     },
     async handleCornerCasesFeedback(feedback) {
-      const refinedStory = this.refinedStory;
-      const existingCornerCases = this.cornerCases; // Obtenemos los casos esquina existentes
+      const refinedStory = this.$store.state.refinedStory;
+      const existingCornerCases = this.$store.state.cornerCases; // Obtenemos los casos esquina existentes
 
       const payload = { refinedStory, feedback, existingCornerCases };
       const result = await this.identifyCornerCases(payload);
@@ -226,92 +231,5 @@ export default {
 </script>
 
 <style scoped>
-.refinement-flow {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #1e1e1e;
-  color: #fff;
-  overflow: hidden;
-  padding: 0 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  padding: 1.5rem;
-  text-align: center;
-  background-color: #252525;
-  border-bottom: 1px solid #333;
-  margin: 0 -2rem;
-}
-
-.content-wrapper {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.chat-container {
-  height: 100%;
-  overflow-y: auto;
-  padding: 1.5rem 0;
-  scrollbar-width: thin;
-  scrollbar-color: #666 #1e1e1e;
-}
-
-.chat-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-container::-webkit-scrollbar-track {
-  background: #1e1e1e;
-}
-
-.chat-container::-webkit-scrollbar-thumb {
-  background-color: #666;
-  border-radius: 4px;
-}
-
-.input-container {
-  padding: 1.5rem 0;
-  background-color: #252525;
-  border-top: 1px solid #333;
-  margin: 0 -2rem;
-  padding: 1.5rem 2rem;
-}
-.input-container textarea {
-  width: 100%;
-  resize: none;
-  background-color: #2e2e2e;
-  color: #fff;
-  border: 1px solid #444;
-  border-radius: 5px;
-  padding: 1rem;
-  margin: 0 0 1rem 0;
-  min-height: 120px;
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.5;
-  box-sizing: border-box;
-}
-.input-container button {
-  margin-left: 5px;
-}
-.back-button {
-  background-color: #dc3545;
-}
-.advance-button {
-  background-color: #28a745;
-}
-.finish-button {
-  background-color: #007bff;
-}
-.loading-indicator {
-  text-align: center;
-  color: #aaa;
-  margin-top: 10px;
-}
+@import '../styles/RefinementFlow.css';
 </style>

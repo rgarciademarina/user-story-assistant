@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Asistente de refinamiento de historias de usuario usando LLM"
 authors = ["Raúl García de Marina Maroto"]
 packages = [
-    { include = "src" }
+    { include = "src" },
+    { include = "tests", format = "sdist" }
 ]
 
 [tool.poetry.dependencies]
@@ -29,6 +30,13 @@ black = "^23.9.1"
 isort = "^5.12.0"
 flake8 = "^6.1.0"
 pytest-asyncio = "^0.21.1"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --import-mode=importlib"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
