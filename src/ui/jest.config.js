@@ -1,7 +1,8 @@
 module.exports = {
   preset: '@vue/cli-plugin-unit-jest',
   transform: {
-    '^.+\\.vue$': '@vue/vue3-jest'
+    '^.+\\.vue$': '@vue/vue3-jest',
+    '^.+\\.(js|jsx)$': 'babel-jest'
   },
   testEnvironmentOptions: {
     customExportConditions: ['node', 'node-addons'],
@@ -15,5 +16,23 @@ module.exports = {
     '!**/node_modules/**'
   ],
   coverageReporters: ['text', 'html'],
-  coverageDirectory: 'coverage'
+  coverageDirectory: 'coverage',
+  transformIgnorePatterns: [
+    'node_modules/(?!(axios)/)'
+  ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
+  rootDir: '.',
+  moduleFileExtensions: [
+    'js',
+    'jsx',
+    'json',
+    'vue'
+  ],
+  testMatch: [
+    '**/tests/unit/**/*.spec.[jt]s?(x)',
+    '**/__tests__/*.[jt]s?(x)'
+  ],
+  testEnvironment: 'jsdom'
 }
