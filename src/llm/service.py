@@ -42,7 +42,7 @@ class LLMService:
         return session_id
 
     def _get_session(self, session_id: UUID) -> Session:
-        """Obtiene una sesión existente o crea una nueva."""
+        """Obtiene una sesión existente."""
         if not isinstance(session_id, UUID):
             try:
                 session_id = UUID(str(session_id))
@@ -50,8 +50,7 @@ class LLMService:
                 raise ValueError(f"ID de sesión inválido: {session_id}")
 
         if session_id not in self._sessions:
-            self._sessions[session_id] = Session(session_id=session_id)
-            self._memories[session_id] = ConversationBufferMemory(return_messages=True)
+            raise ValueError("Sesión no encontrada")
         
         return self._sessions[session_id]
 
@@ -98,10 +97,11 @@ class LLMService:
             if update_session_callback:
                 update_session_callback(session, result)
             
-            # Formatear la interacción para la memoria
+            # Formatear la interacción para la memoria y la sesión
             if format_interaction:
                 human_message, ai_message = format_interaction(result)
                 await self._add_to_memory(session_id, human_message, ai_message)
+                session.add_interaction(human_message, ai_message, process_state)
             
             return result
             
@@ -203,8 +203,11 @@ class LLMService:
                 return human_message, ai_message
 
             def post_process_response(extracted_sections):
+                logger.debug(f"Secciones extraídas en identify_corner_cases: {extracted_sections}")  # Debug log
                 corner_cases_text = extracted_sections.get('**Casos Esquina Actualizados:**', '').strip()
+                logger.debug(f"Texto de casos esquina: {corner_cases_text}")  # Debug log
                 corner_cases = [case.strip() for case in corner_cases_text.split('\n') if case.strip()]
+                logger.debug(f"Lista de casos esquina: {corner_cases}")  # Debug log
                 corner_cases_feedback = extracted_sections.get('**Análisis de Cambios:**', '').strip()
                 return {
                     'corner_cases': corner_cases,
@@ -242,8 +245,8 @@ class LLMService:
         """Propone estrategias de testing para una historia de usuario."""
         try:
             def update_session(session, result):
-                session.testing_strategies = result['testing_strategies']
-                session.testing_feedback = result['testing_feedback']
+                session.testing_strategy = result['testing_strategies']
+                session.testing_strategy_feedback = result['testing_feedback']
 
             def format_interaction(result):
                 testing_strategies_formatted = '\n'.join(result['testing_strategies'])
