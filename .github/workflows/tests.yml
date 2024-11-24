@@ -4,7 +4,12 @@ on:
   pull_request:
     paths:
       - 'src/ui/**'
-      - 'src/**'
+      - 'src/api/**'
+      - 'src/core/**'
+      - 'src/llm/**'
+      - 'src/models/**'
+      - 'src/utils/**'
+      - 'src/*.py'
       - '.github/workflows/**'
       - 'requirements.txt'
       - 'setup.py'
@@ -13,7 +18,12 @@ on:
   push:
     paths:
       - 'src/ui/**'
-      - 'src/**'
+      - 'src/api/**'
+      - 'src/core/**'
+      - 'src/llm/**'
+      - 'src/models/**'
+      - 'src/utils/**'
+      - 'src/*.py'
       - '.github/workflows/**'
       - 'requirements.txt'
       - 'setup.py'
