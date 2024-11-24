@@ -109,11 +109,12 @@ export default createStore({
       return { cornerCasesResponse };
     },
     async proposeTestingStrategy({ commit, state }, { refinedStory, cornerCases, feedback }) {
-      // Preparar el payload incluyendo el session_id
+      // Preparar el payload incluyendo el session_id y las estrategias existentes
       const payload = {
         story: refinedStory,
         corner_cases: cornerCases,
         feedback,
+        existing_testing_strategies: state.testingStrategies
       };
       
       if (state.sessionId) {
