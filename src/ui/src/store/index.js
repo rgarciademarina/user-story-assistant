@@ -66,7 +66,7 @@ export default createStore({
       }
       
       // Realizar la llamada al backend
-      const response = await axios.post('/api/refine_story', payload);
+      const response = await axios.post('/api/v1/refine_story', payload);
       
       // Guardar el session_id de la respuesta
       if (response.data.session_id) {
@@ -94,36 +94,34 @@ export default createStore({
         payload.session_id = state.sessionId;
       }
 
-      const response = await axios.post('/api/identify_corner_cases', payload);
+      const response = await axios.post('/api/v1/identify_corner_cases', payload);
 
       // Mantener el session_id actualizado si el backend lo devuelve
       if (response.data.session_id) {
         commit('setSessionId', response.data.session_id);
       }
 
-      const cornerCases = response.data.corner_cases;
-      commit('setCornerCases', cornerCases);
+      const newCornerCases = response.data.corner_cases;
+      commit('setCornerCases', newCornerCases);
 
-      const cornerCasesText = cornerCases.join('\n');
-      const cornerCasesResponse = `**Casos Esquina Actualizados:**\n${cornerCasesText}\n\n**Análisis de Cambios:**\n${response.data.corner_cases_feedback}`;
+      // Preparar la respuesta del LLM
+      const cornerCasesResponse = `**Casos Esquina Identificados:**\n${newCornerCases.join('\n')}\n\n**Análisis de Cambios:**\n${response.data.corner_cases_feedback}`;
       return { cornerCasesResponse };
     },
     async proposeTestingStrategy({ commit, state }, { refinedStory, cornerCases, feedback }) {
-      const existingTestingStrategies = state.testingStrategies;
-
-      // Preparar el payload incluyendo el session_id
+      // Preparar el payload incluyendo el session_id y las estrategias existentes
       const payload = {
         story: refinedStory,
         corner_cases: cornerCases,
         feedback,
-        existing_testing_strategies: existingTestingStrategies
+        existing_testing_strategies: state.testingStrategies
       };
       
       if (state.sessionId) {
         payload.session_id = state.sessionId;
       }
 
-      const response = await axios.post('/api/propose_testing_strategy', payload);
+      const response = await axios.post('/api/v1/propose_testing_strategy', payload);
 
       // Mantener el session_id actualizado si el backend lo devuelve
       if (response.data.session_id) {
@@ -133,8 +131,8 @@ export default createStore({
       const testingStrategies = response.data.testing_strategies;
       commit('setTestingStrategies', testingStrategies);
 
-      const testingStrategiesText = testingStrategies.join('\n');
-      const testingStrategyResponse = `**Estrategias de Testing Propuestas:**\n${testingStrategiesText}\n\n**Análisis de Cambios:**\n${response.data.testing_feedback}`;
+      // Preparar la respuesta del LLM
+      const testingStrategyResponse = `**Estrategias de Testing Propuestas:**\n${testingStrategies.join('\n')}\n\n**Análisis de Cambios:**\n${response.data.testing_feedback}`;
       return { testingStrategyResponse };
     },
   },

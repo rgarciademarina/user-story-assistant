@@ -15,6 +15,7 @@
     </div>
     <div class="input-container">
       <textarea
+        ref="feedbackInput"
         v-model="userInput"
         @keydown.enter="handleKeyPress"
         :placeholder="inputPlaceholder"
@@ -125,27 +126,34 @@ export default {
         }
       } finally {
         this.isLoading = false;
+        this.focusInput();
       }
     },
     async handleRefineFeedback(feedback) {
-    if (!this.$store.state.refinedStory) {
-      const payload = { story: feedback, feedback: '' };
-      const result = await this.refineStory(payload);
-      this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
-      return;
-    }
+      if (!this.$store.state.refinedStory) {
+        const payload = { story: feedback, feedback: '' };
+        const result = await this.refineStory(payload);
+        if (result && result.refinementResponse !== undefined) {
+          this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+        }
+        return;
+      }
       const story = this.$store.state.refinedStory;
       const payload = { story, feedback };
       const result = await this.refineStory(payload);
-      this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+      if (result && result.refinementResponse !== undefined) {
+        this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+      }
     },
     async handleCornerCasesFeedback(feedback) {
       const refinedStory = this.$store.state.refinedStory;
-      const existingCornerCases = this.$store.state.cornerCases; // Obtenemos los casos esquina existentes
+      const existingCornerCases = this.$store.state.cornerCases;
 
       const payload = { refinedStory, feedback, existingCornerCases };
       const result = await this.identifyCornerCases(payload);
-      this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
+      if (result && result.cornerCasesResponse !== undefined) {
+        this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
+      }
     },
     async handleTestingStrategyFeedback(feedback) {
       const refinedStory = this.$store.state.refinedStory;
@@ -153,42 +161,69 @@ export default {
       const existingTestingStrategies = this.$store.state.testingStrategies;
       const payload = { refinedStory, cornerCases, feedback, existingTestingStrategies };
       const result = await this.proposeTestingStrategy(payload);
-      this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
+      if (result && result.testingStrategyResponse !== undefined) {
+        this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
+      }
     },
     async advanceStep() {
       if (this.isLoading) return;
 
       if (this.currentStep === 'refineStory') {
-        if (!this.refinedStory) return;
+        // Verificar que hay una historia refinada antes de avanzar
+        if (!this.refinedStory) {
+          return;
+        }
         this.setCurrentStep('cornerCases');
         this.isLoading = true;
         try {
-          await this.handleCornerCasesFeedback(''); // Enviar feedback vacío para avanzar
+          // Obtener los casos esquina iniciales y mostrar la respuesta
+          await this.handleCornerCasesFeedback('');
         } finally {
           this.isLoading = false;
+          // Agregar mensaje del sistema para casos esquina
+          this.addMessage({
+            text: 'Por favor, proporciona feedback sobre los casos esquina identificados o sugiere nuevos casos.',
+            sender: 'system'
+          });
         }
       } else if (this.currentStep === 'cornerCases') {
         this.setCurrentStep('testingStrategy');
         this.isLoading = true;
         try {
-          await this.handleTestingStrategyFeedback(''); // Enviar feedback vacío para avanzar
+          // Obtener las estrategias de testing iniciales y mostrar la respuesta
+          await this.handleTestingStrategyFeedback('');
         } finally {
           this.isLoading = false;
+          // Agregar mensaje del sistema para estrategia de testing
+          this.addMessage({
+            text: 'Por favor, proporciona feedback sobre las estrategias de testing propuestas.',
+            sender: 'system'
+          });
         }
       } else if (this.currentStep === 'testingStrategy') {
         this.setCurrentStep('finished');
+        // Mensaje de finalización
         this.addMessage({
-          text: '¡El proceso ha finalizado exitosamente!',
-          sender: 'assistant',
+          text: '¡Proceso completado! Puedes revisar el resultado final.',
+          sender: 'system'
         });
       }
+      this.focusInput();
     },
     goBack() {
-      if (this.currentStep === 'testingStrategy') {
-        this.setCurrentStep('cornerCases');
-      } else if (this.currentStep === 'cornerCases') {
+      if (this.currentStep === 'cornerCases') {
         this.setCurrentStep('refineStory');
+      } else if (this.currentStep === 'testingStrategy') {
+        this.setCurrentStep('cornerCases');
       }
+      this.focusInput();
+    },
+    focusInput() {
+      this.$nextTick(() => {
+        if (this.$refs.feedbackInput && this.currentStep !== 'finished') {
+          this.$refs.feedbackInput.focus();
+        }
+      });
     },
     previousUserStory() {
       const storyMessage = this.messages.find(
@@ -209,7 +244,9 @@ export default {
     scrollToBottom() {
       this.$nextTick(() => {
         const chatContainer = this.$el.querySelector('.chat-container');
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
       });
     },
     addMessage(message) {

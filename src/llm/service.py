@@ -1,6 +1,6 @@
 import logging
-from langchain.memory import ConversationBufferMemory
-from langchain.schema.messages import HumanMessage, AIMessage, ChatMessage
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import HumanMessage, AIMessage, ChatMessage
 from langchain.schema.runnable import RunnablePassthrough
 from src.config.llm_config import LLMConfig
 from langchain_ollama import OllamaLLM
@@ -16,6 +16,18 @@ from .prompts.testing import testing_strategy_prompt
 
 logger = logging.getLogger(__name__)
 
+class ChatMessageHistory(BaseChatMessageHistory):
+    """Implementación personalizada de historial de chat."""
+    
+    def __init__(self):
+        self.messages = []
+    
+    def add_message(self, message):
+        self.messages.append(message)
+    
+    def clear(self):
+        self.messages = []
+
 class LLMService:
     def __init__(self, config: LLMConfig, llm=None):
         """Inicializa el servicio LLM con la configuración proporcionada."""
@@ -27,7 +39,7 @@ class LLMService:
 
         # Inicializar diccionarios de sesiones y memorias
         self._sessions: Dict[UUID, Session] = {}
-        self._memories: Dict[UUID, ConversationBufferMemory] = {}
+        self._memories: Dict[UUID, ChatMessageHistory] = {}
         
         # Usar los prompts importados directamente
         self.refinement_prompt = refinement_prompt
@@ -38,11 +50,11 @@ class LLMService:
         """Crea una nueva sesión y devuelve su ID."""
         session_id = uuid4()
         self._sessions[session_id] = Session(session_id=session_id)
-        self._memories[session_id] = ConversationBufferMemory(return_messages=True)
+        self._memories[session_id] = ChatMessageHistory()
         return session_id
 
     def _get_session(self, session_id: UUID) -> Session:
-        """Obtiene una sesión existente o crea una nueva."""
+        """Obtiene una sesión existente."""
         if not isinstance(session_id, UUID):
             try:
                 session_id = UUID(str(session_id))
@@ -50,8 +62,7 @@ class LLMService:
                 raise ValueError(f"ID de sesión inválido: {session_id}")
 
         if session_id not in self._sessions:
-            self._sessions[session_id] = Session(session_id=session_id)
-            self._memories[session_id] = ConversationBufferMemory(return_messages=True)
+            raise ValueError("Sesión no encontrada")
         
         return self._sessions[session_id]
 
@@ -98,10 +109,11 @@ class LLMService:
             if update_session_callback:
                 update_session_callback(session, result)
             
-            # Formatear la interacción para la memoria
+            # Formatear la interacción para la memoria y la sesión
             if format_interaction:
                 human_message, ai_message = format_interaction(result)
                 await self._add_to_memory(session_id, human_message, ai_message)
+                session.add_interaction(human_message, ai_message, process_state)
             
             return result
             
@@ -203,8 +215,11 @@ class LLMService:
                 return human_message, ai_message
 
             def post_process_response(extracted_sections):
+                logger.debug(f"Secciones extraídas en identify_corner_cases: {extracted_sections}")  # Debug log
                 corner_cases_text = extracted_sections.get('**Casos Esquina Actualizados:**', '').strip()
+                logger.debug(f"Texto de casos esquina: {corner_cases_text}")  # Debug log
                 corner_cases = [case.strip() for case in corner_cases_text.split('\n') if case.strip()]
+                logger.debug(f"Lista de casos esquina: {corner_cases}")  # Debug log
                 corner_cases_feedback = extracted_sections.get('**Análisis de Cambios:**', '').strip()
                 return {
                     'corner_cases': corner_cases,
@@ -242,8 +257,8 @@ class LLMService:
         """Propone estrategias de testing para una historia de usuario."""
         try:
             def update_session(session, result):
-                session.testing_strategies = result['testing_strategies']
-                session.testing_feedback = result['testing_feedback']
+                session.testing_strategy = result['testing_strategies']
+                session.testing_strategy_feedback = result['testing_feedback']
 
             def format_interaction(result):
                 testing_strategies_formatted = '\n'.join(result['testing_strategies'])
@@ -338,9 +353,10 @@ class LLMService:
             return ""
 
     async def _add_to_memory(self, session_id: UUID, human_message: str, ai_message: str):
+        """Añade mensajes al historial de la conversación."""
         history = self._memories[session_id]
-        history.chat_memory.add_user_message(human_message)
-        history.chat_memory.add_ai_message(ai_message)
+        history.add_message(HumanMessage(content=human_message))
+        history.add_message(AIMessage(content=ai_message))
 
     async def close(self):
         """Cierra recursos y limpia el servicio LLM"""
