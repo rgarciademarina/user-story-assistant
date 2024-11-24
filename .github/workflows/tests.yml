@@ -1,0 +1,165 @@
+name: Tests & Coverage
+
+on:
+  pull_request:
+    paths:
+      - 'src/ui/**'
+      - 'src/api/**'
+      - 'src/core/**'
+      - 'src/llm/**'
+      - 'src/models/**'
+      - 'src/utils/**'
+      - 'src/*.py'
+      - '.github/workflows/**'
+      - 'requirements.txt'
+      - 'setup.py'
+      - 'pytest.ini'
+    branches: [ main ]
+  push:
+    paths:
+      - 'src/ui/**'
+      - 'src/api/**'
+      - 'src/core/**'
+      - 'src/llm/**'
+      - 'src/models/**'
+      - 'src/utils/**'
+      - 'src/*.py'
+      - '.github/workflows/**'
+      - 'requirements.txt'
+      - 'setup.py'
+      - 'pytest.ini'
+    branches: [ main ]
+
+# Añadimos los permisos necesarios
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Necesario para comparar cambios entre commits
+      
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'src/ui/**'
+              - '.github/workflows/tests.yml'
+            backend:
+              - 'src/**'
+              - '!src/ui/**'
+              - 'requirements.txt'
+              - 'setup.py'
+              - 'pytest.ini'
+              - '.github/workflows/tests.yml'
+
+  frontend-tests:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Necesario para comparar cambios entre commits
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './src/ui/package-lock.json'
+          
+      - name: Install Dependencies
+        working-directory: ./src/ui
+        run: npm install
+        
+      - name: Run Tests with Coverage
+        working-directory: ./src/ui
+        run: npm run test:coverage
+        
+      - name: Store Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-coverage
+          path: ./src/ui/coverage/lcov.info
+          
+  backend-tests:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Necesario para comparar cambios entre commits
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+          pip install pytest pytest-cov
+          
+      - name: Run Tests with Coverage
+        run: |
+          python -m pytest --cov=./src --cov-report=xml --cov-report=lcov
+        
+      - name: Store Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: coverage.lcov
+
+  coverage-check:
+    needs: [check-changes, frontend-tests, backend-tests]
+    if: |
+      always() &&
+      (needs.check-changes.outputs.frontend == 'true' || needs.check-changes.outputs.backend == 'true') &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Necesario para comparar cambios entre commits
+      
+      - name: Download Frontend Coverage
+        if: needs.check-changes.outputs.frontend == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-coverage
+          path: frontend-coverage
+
+      - name: Download Backend Coverage
+        if: needs.check-changes.outputs.backend == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-coverage
+          path: backend-coverage
+
+      - name: Check Frontend Coverage
+        if: needs.check-changes.outputs.frontend == 'true'
+        uses: VeryGoodOpenSource/very_good_coverage@v2
+        with:
+          path: frontend-coverage/lcov.info
+          min_coverage: 80
+
+      - name: Check Backend Coverage
+        if: needs.check-changes.outputs.backend == 'true'
+        uses: VeryGoodOpenSource/very_good_coverage@v2
+        with:
+          path: backend-coverage/coverage.lcov
+          min_coverage: 80

@@ -16,7 +16,7 @@ module.exports = {
     '!src/router/index.js',
     '!**/node_modules/**'
   ],
-  coverageReporters: ['text', 'html'],
+  coverageReporters: ['text', 'html', 'lcov'],
   coverageDirectory: 'coverage',
   transformIgnorePatterns: [
     'node_modules/(?!(axios)/)'

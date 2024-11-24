@@ -11,11 +11,17 @@
 }
 
 .header {
-  padding: 1.5rem;
+  padding: 0.75rem;
   text-align: center;
   background-color: #252525;
   border-bottom: 1px solid #333;
   margin: 0 -2rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.4;
 }
 
 .content-wrapper {
