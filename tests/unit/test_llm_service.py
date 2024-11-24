@@ -358,3 +358,79 @@ async def test_service_initialization():
     assert service.llm == mock_llm
     assert service._sessions == {}
     assert service._memories == {}
+
+@pytest.mark.asyncio
+async def test_extract_section_with_non_string_input(llm_service):
+    """Test la extracción de sección con entrada no string."""
+    # Test con un número
+    result = llm_service._extract_section(123, "start", "end")
+    assert result == "123"
+    
+    # Test con None
+    result = llm_service._extract_section(None, "start", "end")
+    assert result == "None"
+    
+    # Test con objeto
+    class TestObj:
+        def __str__(self):
+            return "test_object"
+    result = llm_service._extract_section(TestObj(), "start", "end")
+    assert result == "test_object"
+
+@pytest.mark.asyncio
+async def test_extract_section_error_handling(llm_service):
+    """Test el manejo de errores en extract_section."""
+    # Test con texto vacío
+    result = llm_service._extract_section("", "start", "end")
+    assert result == ""
+    
+    # Test con marcadores None
+    result = llm_service._extract_section("text", None, None)
+    assert result == ""
+    
+    # Test con marcadores vacíos
+    result = llm_service._extract_section("text", "", "")
+    assert result == "text"
+
+@pytest.mark.asyncio
+async def test_add_to_memory_edge_cases(llm_service):
+    """Test casos extremos de add_to_memory."""
+    session_id = llm_service.create_session()
+    
+    # Test con mensajes vacíos
+    await llm_service._add_to_memory(session_id, "", "")
+    memory = llm_service._memories[session_id]
+    assert len(memory.chat_memory.messages) == 2
+    
+    # Test con mensajes muy largos
+    long_message = "x" * 10000
+    await llm_service._add_to_memory(session_id, long_message, long_message)
+    memory = llm_service._memories[session_id]
+    assert len(memory.chat_memory.messages) == 4
+    
+    # Test con sesión inválida
+    with pytest.raises(KeyError):
+        await llm_service._add_to_memory(uuid4(), "test", "test")
+
+@pytest.mark.asyncio
+async def test_service_cleanup(llm_service):
+    """Test la limpieza de recursos del servicio."""
+    # Crear algunas sesiones y memorias
+    session_id1 = llm_service.create_session()
+    session_id2 = llm_service.create_session()
+    
+    # Añadir algunos mensajes
+    await llm_service._add_to_memory(session_id1, "test1", "test1")
+    await llm_service._add_to_memory(session_id2, "test2", "test2")
+    
+    # Verificar que hay datos antes de cerrar
+    assert len(llm_service._memories) == 2
+    assert len(llm_service._sessions) == 2
+    
+    # Cerrar el servicio
+    await llm_service.close()
+    
+    # Verificar que se limpiaron los recursos
+    assert len(llm_service._memories) == 0
+    # Las sesiones deberían mantenerse para referencia
+    assert len(llm_service._sessions) == 2
