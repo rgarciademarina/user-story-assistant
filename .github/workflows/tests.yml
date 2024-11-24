@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: frontend-coverage
-          path: ./src/ui/coverage
+          path: ./src/ui/coverage/lcov.info
           
   backend-tests:
     runs-on: ubuntu-latest
@@ -53,13 +53,13 @@ jobs:
           
       - name: Run Tests with Coverage
         run: |
-          python -m pytest --cov=./src --cov-report=xml
+          python -m pytest --cov=./src --cov-report=xml --cov-report=lcov
         
       - name: Store Coverage Report
         uses: actions/upload-artifact@v3
         with:
           name: backend-coverage
-          path: coverage.xml
+          path: coverage.lcov
 
   coverage-check:
     needs: [frontend-tests, backend-tests]
@@ -67,11 +67,26 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Download Coverage Reports
+      - name: Download Frontend Coverage
         uses: actions/download-artifact@v3
-        
-      - name: Check Coverage Threshold
+        with:
+          name: frontend-coverage
+          path: frontend-coverage
+
+      - name: Download Backend Coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-coverage
+          path: backend-coverage
+
+      - name: Check Frontend Coverage
         uses: VeryGoodOpenSource/very_good_coverage@v2
         with:
-          path: "./coverage.xml"
+          path: frontend-coverage/lcov.info
+          min_coverage: 80
+
+      - name: Check Backend Coverage
+        uses: VeryGoodOpenSource/very_good_coverage@v2
+        with:
+          path: backend-coverage/coverage.lcov
           min_coverage: 80
