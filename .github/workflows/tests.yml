@@ -2,12 +2,51 @@ name: Tests & Coverage
 
 on:
   pull_request:
+    paths:
+      - 'src/ui/**'
+      - 'src/**'
+      - '.github/workflows/**'
+      - 'requirements.txt'
+      - 'setup.py'
+      - 'pytest.ini'
     branches: [ main ]
   push:
+    paths:
+      - 'src/ui/**'
+      - 'src/**'
+      - '.github/workflows/**'
+      - 'requirements.txt'
+      - 'setup.py'
+      - 'pytest.ini'
     branches: [ main ]
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'src/ui/**'
+              - '.github/workflows/tests.yml'
+            backend:
+              - 'src/**'
+              - '!src/ui/**'
+              - 'requirements.txt'
+              - 'setup.py'
+              - 'pytest.ini'
+              - '.github/workflows/tests.yml'
+
   frontend-tests:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -34,6 +73,8 @@ jobs:
           path: ./src/ui/coverage/lcov.info
           
   backend-tests:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -62,30 +103,39 @@ jobs:
           path: coverage.lcov
 
   coverage-check:
-    needs: [frontend-tests, backend-tests]
+    needs: [check-changes, frontend-tests, backend-tests]
+    if: |
+      always() &&
+      (needs.check-changes.outputs.frontend == 'true' || needs.check-changes.outputs.backend == 'true') &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       
       - name: Download Frontend Coverage
+        if: needs.check-changes.outputs.frontend == 'true'
         uses: actions/download-artifact@v3
         with:
           name: frontend-coverage
           path: frontend-coverage
 
       - name: Download Backend Coverage
+        if: needs.check-changes.outputs.backend == 'true'
         uses: actions/download-artifact@v3
         with:
           name: backend-coverage
           path: backend-coverage
 
       - name: Check Frontend Coverage
+        if: needs.check-changes.outputs.frontend == 'true'
         uses: VeryGoodOpenSource/very_good_coverage@v2
         with:
           path: frontend-coverage/lcov.info
           min_coverage: 80
 
       - name: Check Backend Coverage
+        if: needs.check-changes.outputs.backend == 'true'
         uses: VeryGoodOpenSource/very_good_coverage@v2
         with:
           path: backend-coverage/coverage.lcov
