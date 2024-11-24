@@ -1,6 +1,6 @@
 import logging
-from langchain.memory import ConversationBufferMemory
-from langchain.schema.messages import HumanMessage, AIMessage, ChatMessage
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.messages import HumanMessage, AIMessage, ChatMessage
 from langchain.schema.runnable import RunnablePassthrough
 from src.config.llm_config import LLMConfig
 from langchain_ollama import OllamaLLM
@@ -16,6 +16,18 @@ from .prompts.testing import testing_strategy_prompt
 
 logger = logging.getLogger(__name__)
 
+class ChatMessageHistory(BaseChatMessageHistory):
+    """Implementación personalizada de historial de chat."""
+    
+    def __init__(self):
+        self.messages = []
+    
+    def add_message(self, message):
+        self.messages.append(message)
+    
+    def clear(self):
+        self.messages = []
+
 class LLMService:
     def __init__(self, config: LLMConfig, llm=None):
         """Inicializa el servicio LLM con la configuración proporcionada."""
@@ -27,7 +39,7 @@ class LLMService:
 
         # Inicializar diccionarios de sesiones y memorias
         self._sessions: Dict[UUID, Session] = {}
-        self._memories: Dict[UUID, ConversationBufferMemory] = {}
+        self._memories: Dict[UUID, ChatMessageHistory] = {}
         
         # Usar los prompts importados directamente
         self.refinement_prompt = refinement_prompt
@@ -38,7 +50,7 @@ class LLMService:
         """Crea una nueva sesión y devuelve su ID."""
         session_id = uuid4()
         self._sessions[session_id] = Session(session_id=session_id)
-        self._memories[session_id] = ConversationBufferMemory(return_messages=True)
+        self._memories[session_id] = ChatMessageHistory()
         return session_id
 
     def _get_session(self, session_id: UUID) -> Session:
@@ -341,9 +353,10 @@ class LLMService:
             return ""
 
     async def _add_to_memory(self, session_id: UUID, human_message: str, ai_message: str):
+        """Añade mensajes al historial de la conversación."""
         history = self._memories[session_id]
-        history.chat_memory.add_user_message(human_message)
-        history.chat_memory.add_ai_message(ai_message)
+        history.add_message(HumanMessage(content=human_message))
+        history.add_message(AIMessage(content=ai_message))
 
     async def close(self):
         """Cierra recursos y limpia el servicio LLM"""

@@ -1,11 +1,10 @@
 import pytest
 from uuid import UUID, uuid4
 from unittest.mock import Mock, patch, AsyncMock
-from src.llm.service import LLMService
+from src.llm.service import LLMService, ChatMessageHistory
 from src.config.llm_config import LLMConfig
 from src.llm.models import Session, ProcessState
-from langchain.schema.messages import HumanMessage, AIMessage
-from langchain.memory import ConversationBufferMemory
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_ollama import OllamaLLM
 
 @pytest.fixture
@@ -73,7 +72,7 @@ async def test_create_session(llm_service):
     assert isinstance(session_id, UUID)
     assert session_id in llm_service._sessions
     assert session_id in llm_service._memories
-    assert isinstance(llm_service._memories[session_id], ConversationBufferMemory)
+    assert isinstance(llm_service._memories[session_id], ChatMessageHistory)
 
 @pytest.mark.asyncio
 async def test_get_session_with_invalid_id(llm_service):
@@ -114,10 +113,10 @@ async def test_memory_integration(llm_service):
     memory = llm_service._memories[session_id]
     
     # Simular una conversación
-    memory.chat_memory.add_message(HumanMessage(content="¿Cómo estás?"))
-    memory.chat_memory.add_message(AIMessage(content="¡Muy bien!"))
+    memory.add_message(HumanMessage(content="¿Cómo estás?"))
+    memory.add_message(AIMessage(content="¡Muy bien!"))
     
-    messages = memory.chat_memory.messages
+    messages = memory.messages
     assert len(messages) == 2
     assert isinstance(messages[0], HumanMessage)
     assert isinstance(messages[1], AIMessage)
@@ -221,7 +220,7 @@ async def test_add_to_memory(llm_service):
     )
     
     memory = llm_service._memories[session_id]
-    messages = memory.chat_memory.messages
+    messages = memory.messages
     
     assert len(messages) == 2
     assert messages[0].content == "Pregunta de prueba"
@@ -233,7 +232,7 @@ async def test_refine_story_complete_flow(llm_service):
     session_id = llm_service.create_session()
     
     # Asegurarnos de que la memoria está inicializada
-    llm_service._memories[session_id] = ConversationBufferMemory(return_messages=True)
+    llm_service._memories[session_id] = ChatMessageHistory()
     
     result = await llm_service.refine_story(
         session_id=session_id,
@@ -257,7 +256,7 @@ async def test_identify_corner_cases_complete_flow(llm_service):
     session_id = llm_service.create_session()
     
     # Asegurarnos de que la memoria está inicializada
-    llm_service._memories[session_id] = ConversationBufferMemory(return_messages=True)
+    llm_service._memories[session_id] = ChatMessageHistory()
     
     result = await llm_service.identify_corner_cases(
         session_id=session_id,
@@ -282,7 +281,7 @@ async def test_propose_testing_strategy_complete_flow(llm_service):
     session_id = llm_service.create_session()
     
     # Asegurarnos de que la memoria está inicializada
-    llm_service._memories[session_id] = ConversationBufferMemory(return_messages=True)
+    llm_service._memories[session_id] = ChatMessageHistory()
     
     result = await llm_service.propose_testing_strategy(
         session_id=session_id,
@@ -400,13 +399,19 @@ async def test_add_to_memory_edge_cases(llm_service):
     # Test con mensajes vacíos
     await llm_service._add_to_memory(session_id, "", "")
     memory = llm_service._memories[session_id]
-    assert len(memory.chat_memory.messages) == 2
+    assert len(memory.messages) == 2
+    assert isinstance(memory.messages[0], HumanMessage)
+    assert isinstance(memory.messages[1], AIMessage)
+    assert memory.messages[0].content == ""
+    assert memory.messages[1].content == ""
     
     # Test con mensajes muy largos
     long_message = "x" * 10000
     await llm_service._add_to_memory(session_id, long_message, long_message)
     memory = llm_service._memories[session_id]
-    assert len(memory.chat_memory.messages) == 4
+    assert len(memory.messages) == 4
+    assert memory.messages[2].content == long_message
+    assert memory.messages[3].content == long_message
     
     # Test con sesión inválida
     with pytest.raises(KeyError):
@@ -426,6 +431,10 @@ async def test_service_cleanup(llm_service):
     # Verificar que hay datos antes de cerrar
     assert len(llm_service._memories) == 2
     assert len(llm_service._sessions) == 2
+    
+    # Verificar que los mensajes se guardaron correctamente
+    assert len(llm_service._memories[session_id1].messages) == 2
+    assert len(llm_service._memories[session_id2].messages) == 2
     
     # Cerrar el servicio
     await llm_service.close()
