@@ -133,21 +133,27 @@ export default {
       if (!this.$store.state.refinedStory) {
         const payload = { story: feedback, feedback: '' };
         const result = await this.refineStory(payload);
-        this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+        if (result && result.refinementResponse !== undefined) {
+          this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+        }
         return;
       }
       const story = this.$store.state.refinedStory;
       const payload = { story, feedback };
       const result = await this.refineStory(payload);
-      this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+      if (result && result.refinementResponse !== undefined) {
+        this.addMessage({ text: result.refinementResponse, sender: 'assistant' });
+      }
     },
     async handleCornerCasesFeedback(feedback) {
       const refinedStory = this.$store.state.refinedStory;
-      const existingCornerCases = this.$store.state.cornerCases; // Obtenemos los casos esquina existentes
+      const existingCornerCases = this.$store.state.cornerCases;
 
       const payload = { refinedStory, feedback, existingCornerCases };
       const result = await this.identifyCornerCases(payload);
-      this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
+      if (result && result.cornerCasesResponse !== undefined) {
+        this.addMessage({ text: result.cornerCasesResponse, sender: 'assistant' });
+      }
     },
     async handleTestingStrategyFeedback(feedback) {
       const refinedStory = this.$store.state.refinedStory;
@@ -155,7 +161,9 @@ export default {
       const existingTestingStrategies = this.$store.state.testingStrategies;
       const payload = { refinedStory, cornerCases, feedback, existingTestingStrategies };
       const result = await this.proposeTestingStrategy(payload);
-      this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
+      if (result && result.testingStrategyResponse !== undefined) {
+        this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
+      }
     },
     async advanceStep() {
       if (this.isLoading) return;
@@ -236,7 +244,9 @@ export default {
     scrollToBottom() {
       this.$nextTick(() => {
         const chatContainer = this.$el.querySelector('.chat-container');
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
       });
     },
     addMessage(message) {

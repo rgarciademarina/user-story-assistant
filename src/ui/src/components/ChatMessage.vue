@@ -6,21 +6,30 @@
   
   <script>
   import markdownIt from 'markdown-it';
-  
+
+  const md = markdownIt({
+    html: true,
+    breaks: true,
+    linkify: true
+  });
+
   export default {
     props: {
       message: {
         type: Object,
         required: true,
+        validator: (value) => {
+          return value && typeof value.text === 'string' && typeof value.sender === 'string';
+        }
       },
     },
     computed: {
       messageClass() {
-        return this.message.sender === 'user' ? 'user-message' : 'assistant-message';
+        return this.message?.sender === 'user' ? 'user-message' : 'assistant-message';
       },
       renderedMessage() {
-        const md = markdownIt();
-        return md.render(this.message.text);
+        const text = this.message?.text;
+        return md.render(typeof text === 'string' ? text : '');
       },
     },
   };

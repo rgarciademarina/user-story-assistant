@@ -3,15 +3,12 @@ import UserStoryForm from '@/components/UserStoryForm.vue'
 
 describe('UserStoryForm.vue', () => {
   let wrapper
-  let consoleSpy
-
+  
   beforeEach(() => {
-    consoleSpy = jest.spyOn(console, 'log')
     wrapper = mount(UserStoryForm)
   })
 
   afterEach(() => {
-    consoleSpy.mockRestore()
     wrapper.unmount()
   })
 
@@ -48,10 +45,6 @@ describe('UserStoryForm.vue', () => {
 
     // Enviar el formulario
     await submitButton.trigger('click')
-
-    // Verificar los logs
-    expect(consoleSpy).toHaveBeenCalledWith('UserStoryForm - submitForm - localStory:', testStory)
-    expect(consoleSpy).toHaveBeenCalledWith('UserStoryForm - submitForm - localFeedback:', testFeedback)
 
     // Verificar que se emitió el evento con los valores correctos
     expect(wrapper.emitted('submit')).toBeTruthy()

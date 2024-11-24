@@ -7,6 +7,15 @@ console.warn = (...args) => {
   originalWarn.apply(console, args);
 };
 
+// Silenciar warnings de Vue durante las pruebas
+const warn = console.warn;
+console.warn = function (message, ...args) {
+  if (message.toString().includes('[Vue warn]')) {
+    return;
+  }
+  warn.apply(console, [message, ...args]);
+};
+
 // Setup global test environment
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),

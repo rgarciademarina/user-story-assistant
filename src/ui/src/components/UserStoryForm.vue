@@ -45,9 +45,6 @@ export default {
       const story = this.localStory.trim();
       const feedback = this.localFeedback.trim();
       
-      console.log('UserStoryForm - submitForm - localStory:', story);
-      console.log('UserStoryForm - submitForm - localFeedback:', feedback);
-      
       this.$emit('submit', {
         story,
         feedback,

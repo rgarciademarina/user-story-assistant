@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, shallowMount } from '@vue/test-utils'
 import { createStore } from 'vuex'
 import RefinementFlow from '@/components/RefinementFlow.vue'
 import ChatMessage from '@/components/ChatMessage.vue'
@@ -313,4 +313,368 @@ describe('RefinementFlow.vue', () => {
     expect(document.activeElement).toBe(activeElement)
     expect(document.activeElement).not.toBe(textarea.element)
   })
+
+  test('maneja errores durante el proceso de refinamiento', async () => {
+    const originalDispatch = store.dispatch;
+    const errorMessage = 'Error durante el refinamiento';
+    
+    store.dispatch = jest.fn().mockImplementation((action) => {
+      if (action === 'refineStory') {
+        return Promise.resolve({
+          success: false,
+          error: errorMessage,
+          refinementResponse: 'Error: ' + errorMessage
+        });
+      }
+      return originalDispatch(action);
+    });
+
+    await wrapper.setData({ userInput: 'Test story' });
+    await wrapper.find('button').trigger('click');
+    
+    expect(store.dispatch).toHaveBeenCalledWith('refineStory', expect.any(Object));
+    expect(wrapper.vm.isLoading).toBe(false);
+    
+    store.dispatch = originalDispatch;
+  });
+
+  test('maneja errores durante la identificación de casos esquina', async () => {
+    await store.dispatch('setCurrentStep', 'cornerCases');
+    const originalDispatch = store.dispatch;
+    const errorMessage = 'Error en casos esquina';
+    
+    store.dispatch = jest.fn().mockImplementation((action) => {
+      if (action === 'identifyCornerCases') {
+        return Promise.resolve({
+          success: false,
+          error: errorMessage,
+          cornerCasesResponse: 'Error: ' + errorMessage
+        });
+      }
+      return originalDispatch(action);
+    });
+
+    await wrapper.setData({ userInput: 'Test feedback' });
+    await wrapper.find('button').trigger('click');
+    
+    expect(store.dispatch).toHaveBeenCalledWith('identifyCornerCases', expect.any(Object));
+    expect(wrapper.vm.isLoading).toBe(false);
+    
+    store.dispatch = originalDispatch;
+  });
+
+  test('maneja errores durante la propuesta de estrategia de testing', async () => {
+    await store.dispatch('setCurrentStep', 'testingStrategy');
+    const originalDispatch = store.dispatch;
+    const errorMessage = 'Error en estrategia de testing';
+    
+    store.dispatch = jest.fn().mockImplementation((action) => {
+      if (action === 'proposeTestingStrategy') {
+        return Promise.resolve({
+          success: false,
+          error: errorMessage,
+          testingStrategyResponse: 'Error: ' + errorMessage
+        });
+      }
+      return originalDispatch(action);
+    });
+
+    await wrapper.setData({ userInput: 'Test feedback' });
+    await wrapper.find('button').trigger('click');
+    
+    expect(store.dispatch).toHaveBeenCalledWith('proposeTestingStrategy', expect.any(Object));
+    expect(wrapper.vm.isLoading).toBe(false);
+    
+    store.dispatch = originalDispatch;
+  });
+
+  test('maneja el caso cuando no hay historia refinada al intentar avanzar', async () => {
+    store.state.refinedStory = null;
+    await wrapper.vm.advanceStep();
+    expect(store.state.currentStep).toBe('refineStory');
+  });
+
+  test('maneja correctamente el proceso de finalización', async () => {
+    await store.dispatch('setCurrentStep', 'testingStrategy');
+    store.state.refinedStory = 'Historia refinada';
+    await wrapper.vm.advanceStep();
+    
+    expect(store.state.currentStep).toBe('finished');
+    const messages = wrapper.vm.messages;
+    const lastMessage = messages[messages.length - 1];
+    expect(lastMessage.text).toContain('¡Proceso completado!');
+    expect(lastMessage.sender).toBe('system');
+  });
+
+  test('maneja la navegación entre pasos', async () => {
+    await store.dispatch('setCurrentStep', 'refineStory');
+    expect(store.state.currentStep).toBe('refineStory');
+
+    await store.dispatch('setCurrentStep', 'identifyCornerCases');
+    expect(store.state.currentStep).toBe('identifyCornerCases');
+
+    await store.dispatch('setCurrentStep', 'proposeTestingStrategy');
+    expect(store.state.currentStep).toBe('proposeTestingStrategy');
+  });
+
+  test('reinicia el proceso correctamente', async () => {
+    // Establecer algunos datos
+    await store.dispatch('addMessage', { text: 'Test message', sender: 'user' });
+    await store.dispatch('setCurrentStep', 'identifyCornerCases');
+    await store.dispatch('setRefinedStory', 'Refined story');
+
+    // Reiniciar el proceso
+    await store.dispatch('resetProcess');
+
+    // Verificar que todo se haya reiniciado
+    expect(store.state.messages).toHaveLength(0);
+    expect(store.state.currentStep).toBe('refineStory');
+    expect(store.state.refinedStory).toBe('');
+  });
+
+  test('handleKeyPress permite salto de línea con Shift+Enter', async () => {
+    const event = {
+      shiftKey: true,
+      preventDefault: jest.fn()
+    };
+    await wrapper.vm.handleKeyPress(event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  test('handleKeyPress envía feedback con Enter', async () => {
+    const event = {
+      shiftKey: false,
+      preventDefault: jest.fn()
+    };
+    wrapper.vm.sendFeedback = jest.fn();
+    await wrapper.vm.handleKeyPress(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(wrapper.vm.sendFeedback).toHaveBeenCalled();
+  });
+
+  test('maneja errores durante el proceso de refinamiento con error en la respuesta', async () => {
+    const originalDispatch = store.dispatch;
+    const errorMessage = 'Error durante el refinamiento';
+    
+    store.dispatch = jest.fn().mockImplementation((action) => {
+      if (action === 'refineStory') {
+        return Promise.resolve({
+          success: false,
+          error: errorMessage,
+          refinementResponse: undefined
+        });
+      }
+      return originalDispatch(action);
+    });
+
+    await wrapper.setData({ userInput: 'Test story' });
+    await wrapper.find('button').trigger('click');
+    
+    expect(store.dispatch).toHaveBeenCalledWith('refineStory', expect.any(Object));
+    expect(wrapper.vm.isLoading).toBe(false);
+    
+    store.dispatch = originalDispatch;
+  });
+
+  test('maneja errores durante la identificación de casos esquina con respuesta undefined', async () => {
+    await store.dispatch('setCurrentStep', 'cornerCases');
+    const originalDispatch = store.dispatch;
+    
+    store.dispatch = jest.fn().mockImplementation((action) => {
+      if (action === 'identifyCornerCases') {
+        return Promise.resolve({
+          success: false,
+          cornerCasesResponse: undefined
+        });
+      }
+      return originalDispatch(action);
+    });
+
+    await wrapper.setData({ userInput: 'Test feedback' });
+    await wrapper.find('button').trigger('click');
+    
+    expect(store.dispatch).toHaveBeenCalledWith('identifyCornerCases', expect.any(Object));
+    expect(wrapper.vm.isLoading).toBe(false);
+    
+    store.dispatch = originalDispatch;
+  });
+
+  test('maneja errores durante la propuesta de testing con respuesta vacía', async () => {
+    await store.dispatch('setCurrentStep', 'testingStrategy');
+    const originalDispatch = store.dispatch;
+    
+    store.dispatch = jest.fn().mockImplementation((action) => {
+      if (action === 'proposeTestingStrategy') {
+        return Promise.resolve({
+          success: false,
+          testingStrategyResponse: ''
+        });
+      }
+      return originalDispatch(action);
+    });
+
+    await wrapper.setData({ userInput: 'Test feedback' });
+    await wrapper.find('button').trigger('click');
+    
+    expect(store.dispatch).toHaveBeenCalledWith('proposeTestingStrategy', expect.any(Object));
+    expect(wrapper.vm.isLoading).toBe(false);
+    
+    store.dispatch = originalDispatch;
+  });
+
+  describe('scrollToBottom', () => {
+    it('llama a scrollTop cuando el elemento existe', async () => {
+      const wrapper = mount(RefinementFlow, {
+        global: {
+          plugins: [store]
+        }
+      });
+      
+      // Mock del elemento DOM
+      const mockElement = {
+        scrollHeight: 1000,
+        scrollTop: 0
+      };
+      
+      // Mock del querySelector para devolver nuestro elemento mock
+      wrapper.vm.$el.querySelector = jest.fn().mockReturnValue(mockElement);
+      
+      // Llama al método
+      wrapper.vm.scrollToBottom();
+      
+      // Espera al siguiente tick
+      await wrapper.vm.$nextTick();
+      
+      // Verifica que se llamó a querySelector con la clase correcta
+      expect(wrapper.vm.$el.querySelector).toHaveBeenCalledWith('.chat-container');
+      
+      // Verifica que se estableció scrollTop
+      expect(mockElement.scrollTop).toBe(1000);
+    });
+
+    it('maneja el caso cuando el elemento no existe', async () => {
+      const wrapper = mount(RefinementFlow, {
+        global: {
+          plugins: [store]
+        }
+      });
+      
+      // Mock del querySelector para devolver null
+      wrapper.vm.$el.querySelector = jest.fn().mockReturnValue(null);
+      
+      // Llama al método
+      wrapper.vm.scrollToBottom();
+      
+      // Espera al siguiente tick
+      await wrapper.vm.$nextTick();
+      
+      // Verifica que se llamó a querySelector
+      expect(wrapper.vm.$el.querySelector).toHaveBeenCalledWith('.chat-container');
+    });
+  });
+
+  describe('manejo de errores en respuestas', () => {
+    let mockStore;
+    let addMessageSpy;
+    
+    beforeEach(() => {
+      // Crear un store mock para cada prueba
+      mockStore = createStore({
+        state: {
+          messages: [],
+          currentStep: 'refineStory',
+          refinedStory: null,
+          cornerCases: [],
+          testingStrategies: []
+        },
+        mutations: {
+          addMessage(state, message) {
+            state.messages.push(message);
+          },
+          setCurrentStep(state, step) {
+            state.currentStep = step;
+          }
+        },
+        actions: {
+          addMessage({ commit }, message) {
+            commit('addMessage', message);
+          },
+          resetProcess: jest.fn(),
+          setCurrentStep({ commit }, step) {
+            commit('setCurrentStep', step);
+          }
+        }
+      });
+      
+      // Espía la acción addMessage
+      addMessageSpy = jest.spyOn(mockStore._actions.addMessage, '0');
+    });
+
+    it('maneja respuesta undefined en handleRefineFeedback', async () => {
+      const wrapper = shallowMount(RefinementFlow, {
+        global: {
+          plugins: [mockStore]
+        },
+        mounted: jest.fn()
+      });
+
+      // Mock de la acción refineStory
+      wrapper.vm.refineStory = jest.fn().mockResolvedValue({ refinementResponse: undefined });
+
+      // Resetear el spy antes de la prueba
+      addMessageSpy.mockClear();
+
+      // Llama al método con un feedback
+      await wrapper.vm.handleRefineFeedback('test feedback');
+
+      // Verifica que no se llamó a addMessage
+      expect(addMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('maneja respuesta undefined en handleCornerCasesFeedback', async () => {
+      const wrapper = shallowMount(RefinementFlow, {
+        global: {
+          plugins: [mockStore]
+        },
+        mounted: jest.fn()
+      });
+
+      // Mock de la acción identifyCornerCases
+      wrapper.vm.identifyCornerCases = jest.fn().mockResolvedValue({ cornerCasesResponse: undefined });
+
+      // Resetear el spy antes de la prueba
+      addMessageSpy.mockClear();
+
+      // Llama al método con un feedback
+      await wrapper.vm.handleCornerCasesFeedback('test feedback');
+
+      // Verifica que no se llamó a addMessage
+      expect(addMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('maneja respuesta undefined en handleTestingStrategyFeedback', async () => {
+      const wrapper = shallowMount(RefinementFlow, {
+        global: {
+          plugins: [mockStore]
+        },
+        mounted: jest.fn()
+      });
+
+      // Mock de la acción proposeTestingStrategy
+      wrapper.vm.proposeTestingStrategy = jest.fn().mockResolvedValue({ testingStrategyResponse: undefined });
+
+      // Resetear el spy antes de la prueba
+      addMessageSpy.mockClear();
+
+      // Llama al método con un feedback
+      await wrapper.vm.handleTestingStrategyFeedback('test feedback');
+
+      // Verifica que no se llamó a addMessage
+      expect(addMessageSpy).not.toHaveBeenCalled();
+    });
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+  });
 });
