@@ -24,14 +24,17 @@
   overflow: hidden;
   margin: 0 auto;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-container {
-  height: 100%;
+  flex: 1;
   overflow-y: auto;
   padding: 1.5rem 0;
   scrollbar-width: thin;
   scrollbar-color: #666 #1e1e1e;
+  min-height: 0; /* Importante para que flex respete el overflow */
 }
 
 .chat-container::-webkit-scrollbar {
@@ -48,6 +51,7 @@
 }
 
 .input-container {
+  flex-shrink: 0; /* Evita que el input se encoja */
   padding: 1.5rem 0;
   background-color: #252525;
   border-top: 1px solid #333;
