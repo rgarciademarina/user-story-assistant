@@ -1,0 +1,75 @@
+name: Tests & Coverage
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './src/ui/package-lock.json'
+          
+      - name: Install Dependencies
+        working-directory: ./src/ui
+        run: npm install
+        
+      - name: Run Tests with Coverage
+        working-directory: ./src/ui
+        run: npm run test:coverage
+        
+      - name: Store Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-coverage
+          path: ./src/ui/coverage
+          
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          
+      - name: Run Tests with Coverage
+        run: pytest --cov=./src --cov-report=xml
+        
+      - name: Store Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: coverage.xml
+
+  coverage-check:
+    needs: [frontend-tests, backend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download Coverage Reports
+        uses: actions/download-artifact@v3
+        
+      - name: Check Coverage Threshold
+        uses: VeryGoodOpenSource/very_good_coverage@v2
+        with:
+          path: "./coverage.xml"
+          min_coverage: 80

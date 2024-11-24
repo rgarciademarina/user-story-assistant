@@ -7,11 +7,16 @@
    - [3.1. Diagrama de arquitectura](#31-diagrama-de-arquitectura)
    - [3.2. Descripción de componentes principales](#32-descripción-de-componentes-principales)
    - [3.3. Descripción de alto nivel del proyecto y estructura de ficheros](#33-descripción-de-alto-nivel-del-proyecto-y-estructura-de-ficheros)
-4. [Modelo de datos](#4-modelo-de-datos)
-5. [Especificación de la API](#5-especificación-de-la-api)
-6. [Historias de usuario](#6-historias-de-usuario)
-7. [Tickets de trabajo](#7-tickets-de-trabajo)
-8. [Pull requests](#8-pull-requests)
+4. [Tests y CI/CD](#4-tests-y-cicd)
+   - [4.1. Estado de los Tests](#41-estado-de-los-tests)
+   - [4.2. Ejecutar Tests Localmente](#42-ejecutar-tests-localmente)
+   - [4.3. Requisitos de Calidad](#43-requisitos-de-calidad)
+   - [4.4. Proceso de Pull Request](#44-proceso-de-pull-request)
+5. [Modelo de datos](#4-modelo-de-datos)
+6. [Especificación de la API](#5-especificación-de-la-api)
+7. [Historias de usuario](#6-historias-de-usuario)
+8. [Tickets de trabajo](#7-tickets-de-trabajo)
+9. [Pull requests](#8-pull-requests)
 
 ---
 
@@ -414,7 +419,22 @@ En caso de detectar problemas durante el despliegue:
 
 TBD
 
-## 4. Especificación de la API
+## 4. Tests y CI/CD
+
+### 4.1. Estado de los Tests
+![Tests](https://github.com/{usuario}/{repo}/actions/workflows/tests.yml/badge.svg)
+
+### 4.2. Ejecutar Tests Localmente
+
+#### Frontend (Vue.js)
+```bash
+cd src/ui
+npm install
+npm run test:unit        # Ejecutar tests unitarios
+npm run test:coverage    # Ejecutar tests con cobertura
+npm run test:e2e        # Ejecutar tests end-to-end
+
+## 6. Especificación de la API
 
 > Detalla los endpoints de la API, métodos soportados, parámetros, respuestas y posibles códigos de estado.
 
@@ -444,7 +464,7 @@ Para US-007: Ejecutar Paso de Refinamiento
 - Cache implementado
 - Tests de integración pasando
 
-## 6. Tickets de trabajo
+## 7. Tickets de trabajo
 
 > Lista y describe los tickets de trabajo necesarios para el desarrollo del proyecto.
 
@@ -507,7 +527,7 @@ Para US-007: Ejecutar Paso de Refinamiento
 - Implementar autenticación de usuarios
 - Desarrollar componentes básicos de la interfaz
 
-## 7. Pull Requests
+## 8. Pull Requests
 
 > Documenta 3 de las Pull Requests realizadas durante la ejecución del proyecto
 
