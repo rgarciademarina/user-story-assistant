@@ -210,66 +210,35 @@ En esta sección se describen los componentes más importantes del sistema, incl
 
 ### **3.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
-El proyecto sigue una arquitectura hexagonal (también conocida como puertos y adaptadores) para mantener el dominio de negocio aislado de las dependencias externas. La estructura de ficheros refleja esta separación de responsabilidades:
+El proyecto está organizado en dos componentes principales:
 
-```plaintext
-story-refinement-assistant/
-├── .env.example                  # Template para variables de entorno
-├── .gitignore
-├── README.md
-├── pyproject.toml                # Configuración de Poetry
-├── docs/
-│   ├── api/                      # Documentación de la API
-│   ├── guides/                   # Guías de usuario
-│   └── technical/                # Documentación técnica
-├── scripts/
-│   ├── setup.sh                  # Scripts de configuración
-│   └── test.sh                   # Scripts de testing
-├── src/
-│   ├── __init__.py
-│   ├── main.py                   # Punto de entrada de FastAPI
-│   ├── config/
-│   │   ├── __init__.py
-│   │   └── settings.py           # Configuración de la aplicación
-│   ├── api/
-│   │   ├── __init__.py
-│   │   ├── routes/
-│   │   │   ├── __init__.py
-│   │   │   ├── user_story.py      # Endpoints relacionados con historias de usuario
-│   │   │   └── workflow.py       # Endpoints de workflow
-│   ├── llm/
-│   │   ├── __init__.py
-│   │   ├── service.py             # Servicio de LLM
-│   │   ├── config.py              # Configuración del LLM
-│   │   ├── prompts/
-│   │   │   ├── __init__.py
-│   │   │   ├── refinement.py      # Plantillas de prompts para refinamiento
-│   │   │   ├── corner_case.py     # Plantillas de prompts para casos esquina
-│   │   │   └── testing.py         # Plantillas de prompts para testing
-│   ├── workflows/
-│   │   ├── __init__.py
-│   │   └── manager.py             # Manager de flujo de trabajo
-│   └── tests/
-│       ├── __init__.py
-│       ├── unit/
-│       │   ├── __init__.py
-│       │   └── test_service.py     # Tests unitarios para el servicio LLM
-│       └── integration/
-│           ├── __init__.py
-│           └── test_endpoints.py   # Tests de integración para endpoints
-├── tests/
-│   ├── unit/
-│   │   ├── __init__.py
-│   │   └── test_service.py
-│   └── test_main.py
-└── frontend/
-    ├── package.json
-    ├── src/
-    │   ├── App.vue
-    │   ├── components/
-    │   └── views/
-    └── public/
 ```
+user-story-assistant/
+├── backend/           # Servidor backend en Python
+│   ├── src/          # Código fuente del backend
+│   │   ├── api/      # Endpoints y rutas de la API
+│   │   ├── config/   # Configuraciones
+│   │   ├── core/     # Lógica de negocio principal
+│   │   ├── llm/      # Servicios de LLM
+│   │   ├── models/   # Modelos de datos
+│   │   └── utils/    # Utilidades
+│   ├── tests/        # Tests del backend
+│   └── README.md     # Documentación del backend
+│
+├── frontend/         # Cliente frontend en Vue.js
+│   ├── src/         # Código fuente del frontend
+│   ├── tests/       # Tests del frontend
+│   └── README.md    # Documentación del frontend
+│
+├── docs/            # Documentación general
+└── README.md        # Este archivo
+```
+
+Esta estructura separa claramente las responsabilidades entre el backend y el frontend, facilitando:
+- Desarrollo independiente de cada componente
+- Despliegues separados
+- Gestión independiente de dependencias
+- Equipos trabajando en paralelo
 
 ---
 
@@ -279,167 +248,16 @@ story-refinement-assistant/
 
 **TBD**
 
-#### Patrones y Principios:
-
-1. **Arquitectura Hexagonal**: Separa el dominio de la infraestructura para mantener una alta cohesión y bajo acoplamiento.
-2. **Dependency Injection**: Facilita el testing y la modularidad, permitiendo sustituir dependencias fácilmente.
-3. **Repository Pattern**: Abstrae el acceso a datos, permitiendo cambiar la fuente de datos sin afectar al dominio.
-4. **Factory Pattern**: Facilita la creación de objetos complejos de manera controlada.
-5. **Strategy Pattern**: Implementación de diferentes estrategias de procesamiento para flexibilidad y extensibilidad.
-
-### **2.4. Infraestructura y despliegue**
-
-Detalla la infraestructura del proyecto, incluyendo un diagrama en el formato que creas conveniente, y explica el proceso de despliegue que se sigue.
-
-#### 2.4.1. Diagrama de Infraestructura
-
-```mermaid
-graph TB
-    subgraph "Sistema Local"
-        LLM[LLM Service]
-        API[API Service]
-        Jira[Jira Local]
-    end
-
-    subgraph "Almacenamiento"
-        VS[Vector Store]
-    end
-
-    subgraph "Interacciones Externas"
-        JIRA[Jira] 
-        CONF[Confluence]
-        GH[GitHub]
-    end
-
-    API --> LLM
-    API --> Jira
-    API --> JIRA
-    API --> CONF
-    API --> GH
-    LLM --> VS
-    Jira --> JIRA
-    Jira --> CONF
-    Jira --> GH
-```
-
-#### 2.4.2. Proceso de Despliegue
-
-Como esta es una Prueba de Concepto (POC) enfocada en el entorno local, el proceso de despliegue se simplifica y no incluye contenedorización ni despliegues en la nube.
-
-##### Fases del Despliegue
-
-1. **Fase de Construcción**
-   - Validación de código y tests unitarios
-   - Instalación de dependencias
-   ```bash
-   # Clonar el repositorio
-   git clone https://github.com/rgarciademarina/AI4Devs-finalproject-RGM.git
-   cd AI4Devs-finalproject-RGM
-
-   # Configurar el entorno virtual
-   poetry install
-   poetry shell
-
-   # Ejecutar tests unitarios
-   poetry run pytest tests/unit
-   ```
-
-2. **Fase de Integración con Jira Local**
-   - Configuración e integración con Jira local
-   - Validación de conexiones y sincronización básica
-   ```bash
-   # Configurar Jira Local
-   # Seguir las instrucciones en el README para configurar Jira Server
-   ```
-
-3. **Fase de Ejecución del Modelo LLM**
-   - Ejecutar el modelo LLM localmente
-   ```bash
-   # Asumiendo que tienes los pesos del modelo descargados
-   python src/llm/run_model.py --model llama-3.2-11b
-   ```
-
-4. **Fase de Desarrollo de la Interfaz Gráfica**
-   - Desarrollar y ejecutar la interfaz gráfica con LangFlow
-   ```bash
-   langflow run src/ui/app.py
-   ```
-
-#### 2.4.3. Configuración por Entorno
-
-| Variable        | Desarrollo | Staging | Producción |
-|-----------------|------------|---------|------------|
-| `ENVIRONMENT`   | development| staging | production |
-| `LOG_LEVEL`     | DEBUG      | INFO    | WARNING    |
-| `DB_POOL_SIZE`  | 5          | 10      | 20         |
-| `CACHE_TTL`     | 300        | 600     | 1800       |
-
-#### 2.4.4. Monitorización del Despliegue
-
-- **Métricas Clave**
-  - Tiempo de respuesta de API
-  - Uso de recursos (CPU/Memoria)
-  - Tasa de errores
-  - Latencia de servicios externos
-
-- **Alertas Configuradas**
-  - Errores en despliegue
-  - Fallos en health checks
-  - Degradación de performance
-  - Errores de integración
-
-#### 2.4.5. Rollback
-
-En caso de detectar problemas durante el despliegue:
-
-1. **Activación Automática**
-   - Umbral de errores superado
-   - Fallos en health checks
-   - Timeouts excesivos
-
-2. **Proceso de Rollback**
-   ```bash
-   # Revertir a versión anterior
-   git checkout <commit_id>
-
-   # Verificar estado
-   git status
-   ```
-
-#### 2.4.6. Consideraciones de Seguridad
-
-- Rotación automática de secretos
-- Escaneo de vulnerabilidades en el código
-- Validación de firmas de archivos importantes
-- Logs de auditoría de despliegues
-
-## 3. Modelo de datos
-
-> Describe el modelo de datos utilizado en el sistema, incluyendo entidades principales, relaciones y cualquier esquema relevante.
-
-TBD
-
-## 4. Tests y CI/CD
-
-### 4.1. Estado de los Tests
-![Tests](https://github.com/{usuario}/{repo}/actions/workflows/tests.yml/badge.svg)
-
-### 4.2. Ejecutar Tests Localmente
-
-#### Frontend (Vue.js)
-```bash
-cd src/ui
-npm install
-npm run test:unit        # Ejecutar tests unitarios
-npm run test:coverage    # Ejecutar tests con cobertura
-npm run test:e2e        # Ejecutar tests end-to-end
-
-## 6. Especificación de la API
+## 5. Especificación de la API
 
 > Detalla los endpoints de la API, métodos soportados, parámetros, respuestas y posibles códigos de estado.
 
 *(Contenido omitido)*
 
+## 6. Historias de usuario
+
+### **Prioridad 1 (Crítica):**
+- US-001: Crear Historia de Usuario
 - US-002: Crear Proyecto
 - US-004: Importar Historia desde Jira
 - US-006: Iniciar Refinamiento
@@ -605,7 +423,3 @@ Para US-007: Ejecutar Paso de Refinamiento
 ![Interfaz de Refinamiento Paso 1](ruta/a/tu/captura_paso1.png)
 ![Interfaz de Refinamiento Paso 2](ruta/a/tu/captura_paso2.png)
 ![Interfaz de Refinamiento Paso 3](ruta/a/tu/captura_paso3.png)
-
-```
-
----

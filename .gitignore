@@ -38,3 +38,7 @@ logs/*
 
 # LangFlow
 .langflow/
+
+# Coverage reports
+.coverage
+htmlcov/
