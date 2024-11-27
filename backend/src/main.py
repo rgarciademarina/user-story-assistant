@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from src.api.routes.refine_story import router as refine_story_router
 from src.api.routes.identify_corner_cases import router as identify_corner_cases_router
 from src.api.routes.propose_testing_strategy import router as propose_testing_strategy_router
+from src.llm.config import get_llm_config
+
 
 app = FastAPI(
     title="User Story Assistant",

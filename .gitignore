@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *.class
@@ -42,3 +42,4 @@ logs/*
 # Coverage reports
 .coverage
 htmlcov/
+coverage.xml
