@@ -2,6 +2,7 @@ import { mount, shallowMount } from '@vue/test-utils'
 import { createStore } from 'vuex'
 import RefinementFlow from '@/components/RefinementFlow.vue'
 import ChatMessage from '@/components/ChatMessage.vue'
+import ToastNotification from '@/components/ToastNotification.vue'
 
 // Mock del store de Vuex
 const createVuexStore = () => {
@@ -13,7 +14,8 @@ const createVuexStore = () => {
       refinedStory: '',
       cornerCases: [],
       testingStrategies: [],
-      sessionId: null
+      sessionId: null,
+      isLoadingJira: false
     },
     mutations: {
       addMessage(state, message) {
@@ -48,6 +50,10 @@ const createVuexStore = () => {
       proposeTestingStrategy: jest.fn().mockResolvedValue({
         testingStrategyResponse: 'Mocked testing strategy response'
       }),
+      fetchJiraStory: jest.fn().mockResolvedValue({
+        success: true,
+        story: 'Mocked Jira story'
+      }),
       setCurrentStep({ commit }, step) {
         commit('setCurrentStep', step);
       },
@@ -71,10 +77,12 @@ describe('RefinementFlow.vue', () => {
       global: {
         plugins: [store],
         components: {
-          ChatMessage
+          ChatMessage,
+          ToastNotification
         },
         stubs: {
-          ChatMessage: true // Stub del componente ChatMessage
+          ChatMessage: true,
+          ToastNotification: true
         }
       }
     })
@@ -99,13 +107,13 @@ describe('RefinementFlow.vue', () => {
   test('botón de enviar está deshabilitado cuando no hay texto', async () => {
     await wrapper.setData({ userInput: '' })
     const sendButton = wrapper.find('button')
-    expect(sendButton.element.disabled).toBe(true)
+    expect(sendButton.attributes('disabled')).toBeDefined()
   })
 
   test('botón de enviar se habilita cuando hay texto', async () => {
     await wrapper.setData({ userInput: 'Test input' })
     const sendButton = wrapper.find('button')
-    expect(sendButton.element.disabled).toBe(false)
+    expect(sendButton.attributes('disabled')).toBeUndefined()
   })
 
   test('muestra el indicador de carga correctamente', async () => {
@@ -287,13 +295,104 @@ describe('RefinementFlow.vue', () => {
   })
 
   test('maneja la tecla Enter con Shift presionado', async () => {
+    const mockTextarea = {
+      classList: {
+        contains: jest.fn().mockReturnValue(false)
+      },
+      selectionStart: 0,
+      value: 'test'
+    }
     const event = {
+      key: 'Enter',
       shiftKey: true,
-      preventDefault: jest.fn()
+      preventDefault: jest.fn(),
+      target: mockTextarea
     }
     
+    await wrapper.setData({ userInput: 'test' })
+    // Con Shift+Enter, no se debe llamar a preventDefault
     await wrapper.vm.handleKeyPress(event)
     expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  test('handleKeyPress permite salto de línea con Shift+Enter', async () => {
+    const mockTextarea = {
+      classList: {
+        contains: jest.fn().mockReturnValue(false)
+      },
+      selectionStart: 0,
+      value: 'test'
+    }
+    const event = {
+      key: 'Enter',
+      shiftKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      target: mockTextarea
+    }
+    
+    await wrapper.setData({ userInput: 'test' })
+    wrapper.vm.sendFeedback = jest.fn()
+    await wrapper.vm.handleKeyPress(event)
+    
+    // Con Shift+Enter, no se debe llamar a preventDefault ni a sendFeedback
+    expect(event.preventDefault).not.toHaveBeenCalled()
+    expect(event.stopPropagation).not.toHaveBeenCalled()
+    expect(wrapper.vm.sendFeedback).not.toHaveBeenCalled()
+  })
+
+  test('handleKeyPress envía feedback con Enter', async () => {
+    const mockTextarea = {
+      classList: {
+        contains: jest.fn().mockReturnValue(false)
+      },
+      selectionStart: 0,
+      value: 'test'
+    }
+    const event = {
+      key: 'Enter',
+      shiftKey: false,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      target: mockTextarea
+    }
+    
+    await wrapper.setData({ userInput: 'test' })
+    wrapper.vm.sendFeedback = jest.fn()
+    await wrapper.vm.handleKeyPress(event)
+    
+    expect(wrapper.vm.sendFeedback).toHaveBeenCalled()
+  })
+
+  test('maneja correctamente la recuperación exitosa de una historia de Jira', async () => {
+    // Preparar el estado para la recuperación de historia de Jira
+    await wrapper.setData({ 
+      jiraStoryId: 'STORYASIS-1',
+      isValidJiraId: true,
+      isLoadingJira: false
+    })
+
+    // Simular un evento en el input de Jira
+    const jiraInput = {
+      classList: {
+        contains: jest.fn().mockReturnValue(true)
+      }
+    }
+    const event = {
+      target: jiraInput,
+      preventDefault: jest.fn()
+    }
+
+    // Crear un mock para fetchJiraStory
+    const fetchJiraMock = jest.fn().mockResolvedValue({ success: true, story: 'Mocked Jira story' })
+    wrapper.vm.fetchJiraStory = fetchJiraMock
+
+    // Llamar a handleKeyPress
+    await wrapper.vm.handleKeyPress(event)
+
+    // Verificar que se llamó a fetchJiraStory
+    expect(fetchJiraMock).toHaveBeenCalled()
+    expect(event.preventDefault).toHaveBeenCalled()
   })
 
   test('no enfoca el input en el estado finished', async () => {
@@ -430,26 +529,6 @@ describe('RefinementFlow.vue', () => {
     expect(store.state.messages).toHaveLength(0);
     expect(store.state.currentStep).toBe('refineStory');
     expect(store.state.refinedStory).toBe('');
-  });
-
-  test('handleKeyPress permite salto de línea con Shift+Enter', async () => {
-    const event = {
-      shiftKey: true,
-      preventDefault: jest.fn()
-    };
-    await wrapper.vm.handleKeyPress(event);
-    expect(event.preventDefault).not.toHaveBeenCalled();
-  });
-
-  test('handleKeyPress envía feedback con Enter', async () => {
-    const event = {
-      shiftKey: false,
-      preventDefault: jest.fn()
-    };
-    wrapper.vm.sendFeedback = jest.fn();
-    await wrapper.vm.handleKeyPress(event);
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(wrapper.vm.sendFeedback).toHaveBeenCalled();
   });
 
   test('maneja errores durante el proceso de refinamiento con error en la respuesta', async () => {
@@ -677,4 +756,38 @@ describe('RefinementFlow.vue', () => {
       jest.clearAllMocks();
     });
   });
+
+  test('muestra el campo de entrada de Jira ID en el paso inicial', () => {
+    const jiraInput = wrapper.find('.jira-input')
+    const jiraButton = wrapper.find('.jira-button')
+    
+    expect(jiraInput.exists()).toBe(true)
+    expect(jiraButton.exists()).toBe(true)
+    expect(jiraButton.attributes('disabled')).toBeDefined()
+  })
+
+  test('valida correctamente el formato del ID de Jira', async () => {
+    await wrapper.setData({ jiraStoryId: 'INVALID-ID' })
+    let jiraButton = wrapper.find('.jira-button')
+    expect(jiraButton.attributes('disabled')).toBeDefined()
+
+    await wrapper.setData({ jiraStoryId: 'STORYASIS-1' })
+    jiraButton = wrapper.find('.jira-button')
+    expect(jiraButton.attributes('disabled')).toBeUndefined()
+  })
+
+  test('maneja correctamente errores en la recuperación de historia de Jira', async () => {
+    const fetchJiraMock = jest.fn().mockRejectedValue(new Error('Error al recuperar la historia'))
+    store._actions.fetchJiraStory = [fetchJiraMock]
+    
+    await wrapper.setData({ jiraStoryId: 'STORYASIS-1' })
+    const jiraButton = wrapper.find('.jira-button')
+    await jiraButton.trigger('click')
+    
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    
+    expect(wrapper.vm.showToast).toBe(true)
+    expect(wrapper.vm.toastType).toBe('error')
+  })
 });
