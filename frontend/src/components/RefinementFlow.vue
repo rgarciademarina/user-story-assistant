@@ -21,40 +21,70 @@
         :placeholder="inputPlaceholder"
         :disabled="isLoading"
       ></textarea>
-      <div class="button-group">
-        <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
-        <button
-          v-if="backButtonLabel"
-          @click="goBack"
-          class="back-button"
-        >
-          {{ backButtonLabel }}
-        </button>
-        <button
-          v-if="currentStep !== 'finished'"
-          @click="advanceStep"
-          :class="['advance-button', advanceButtonClass]"
-          :disabled="!canAdvance"
-        >
-          {{ nextButtonLabel }}
-        </button>
+      <div class="button-container">
+        <div class="main-buttons">
+          <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
+          <button
+            v-if="backButtonLabel"
+            @click="goBack"
+            class="back-button"
+          >
+            {{ backButtonLabel }}
+          </button>
+          <button
+            v-if="currentStep !== 'finished'"
+            @click="advanceStep"
+            :class="['advance-button', advanceButtonClass]"
+            :disabled="!canAdvance"
+          >
+            {{ nextButtonLabel }}
+          </button>
+        </div>
+        <div v-if="currentStep === 'refineStory' && !refinedStory" class="jira-input-container">
+          <input
+            v-model="jiraStoryId"
+            :class="['jira-input', { 'is-valid': isValidJiraId }]"
+            placeholder="ID de Jira (ej: STORYASIS-1)"
+            :disabled="isLoadingJira"
+            @keydown.enter="handleKeyPress"
+          />
+          <button
+            @click="fetchJiraStory"
+            :disabled="!isValidJiraId || isLoadingJira"
+            class="jira-button"
+          >
+            {{ isLoadingJira ? 'Recuperando...' : 'Recuperar historia' }}
+          </button>
+        </div>
       </div>
     </div>
+    <ToastNotification
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+    />
   </div>
 </template>
 
 <script>
 import { mapState, mapActions } from 'vuex';
 import ChatMessage from './ChatMessage.vue';
+import ToastNotification from './ToastNotification.vue';
 
 export default {
   components: {
     ChatMessage,
+    ToastNotification,
   },
   data() {
     return {
       userInput: '',
       isLoading: false,
+      jiraStoryId: '',
+      isLoadingJira: false,
+      showToast: false,
+      toastMessage: '',
+      toastType: 'info',
     };
   },
   computed: {
@@ -96,6 +126,9 @@ export default {
     },
     inputPlaceholder() {
       return this.isLoading ? 'Esperando respuesta...' : 'Escribe tu feedback aquí...';
+    },
+    isValidJiraId() {
+      return /^[A-Z]+-\d+$/.test(this.jiraStoryId.trim());
     },
   },
   methods: {
@@ -225,6 +258,30 @@ export default {
         }
       });
     },
+    async fetchJiraStory() {
+      this.isLoadingJira = true;
+      try {
+        const response = await fetch(`/api/v1/jira/story/${this.jiraStoryId}`);
+        if (!response.ok) {
+          throw new Error(response.status === 404 ? 'Historia no encontrada' : 'Error al recuperar la historia');
+        }
+        const data = await response.json();
+        this.userInput = `${data.title}\n\n${data.description || ''}`;
+        this.showToastMessage('Historia recuperada correctamente', 'success');
+      } catch (error) {
+        this.showToastMessage(error.message, 'error');
+      } finally {
+        this.isLoadingJira = false;
+      }
+    },
+    showToastMessage(message, type = 'info') {
+      this.toastMessage = message;
+      this.toastType = type;
+      this.showToast = true;
+      setTimeout(() => {
+        this.showToast = false;
+      }, 3000);
+    },
     previousUserStory() {
       const storyMessage = this.messages.find(
         (message) => message.sender === 'userStory'
@@ -232,14 +289,24 @@ export default {
       return storyMessage ? storyMessage.text : '';
     },
     handleKeyPress(event) {
-      if (event.shiftKey) {
-        // Permitir el salto de línea
+      // Si es el campo de Jira y el ID es válido, recuperar la historia
+      if (event.target.classList.contains('jira-input')) {
+        if (this.isValidJiraId && !this.isLoadingJira) {
+          event.preventDefault();
+          this.fetchJiraStory();
+        }
         return;
-      } else {
-        // Prevenir el salto de línea y enviar el mensaje
-        event.preventDefault();
-        this.sendFeedback();
       }
+
+      // Si es el textarea
+      if (event.shiftKey) {
+        // Permitir el salto de línea con Shift+Enter
+        return;
+      }
+      
+      // Enviar el feedback
+      event.preventDefault();
+      this.sendFeedback();
     },
     scrollToBottom() {
       this.$nextTick(() => {
@@ -269,4 +336,69 @@ export default {
 
 <style scoped>
 @import '../styles/RefinementFlow.css';
+
+/* Sobreescribir estilos del contenedor de input */
+.input-container {
+  padding: 0.75rem 2rem;
+}
+
+.input-container textarea {
+  margin-bottom: 0.5rem;
+  min-height: 100px;
+  padding: 0.75rem;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.main-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.jira-input-container {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.jira-input {
+  width: 150px;
+  padding: 6px 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #2e2e2e;
+  color: #fff;
+  font-size: 14px;
+}
+
+.jira-input.is-valid {
+  border-color: #28a745;
+}
+
+.jira-button {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.jira-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
+
+/* Ajustar tamaño de todos los botones para que sean más compactos */
+button {
+  padding: 6px 12px;
+  font-size: 14px;
+}
 </style>
