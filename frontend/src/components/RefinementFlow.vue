@@ -106,7 +106,7 @@ export default {
     nextButtonLabel() {
       if (this.currentStep === 'refineStory') return 'Casos Esquina';
       if (this.currentStep === 'cornerCases') return 'Testing';
-      if (this.currentStep === 'testingStrategy') return 'Finalizar';
+      if (this.currentStep === 'testingStrategy') return 'Composición';
       return null;
     },
     backButtonLabel() {
@@ -136,6 +136,7 @@ export default {
       'refineStory',
       'identifyCornerCases',
       'proposeTestingStrategy',
+      'finalizeStory',
       'addMessage',
       'resetProcess',
       'setCurrentStep',
@@ -198,6 +199,29 @@ export default {
         this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
       }
     },
+    async finalizeStory() {
+      this.isLoading = true;
+      try {
+        const result = await this.$store.dispatch('finalizeStory', {
+          feedback: this.userInput || ''
+        });
+        
+        // Mostrar respuesta del backend
+        if (result && result.finalizationResponse) {
+          this.addMessage({ 
+            text: result.finalizationResponse, 
+            sender: 'assistant' 
+          });
+        }
+      } catch (error) {
+        this.showToastMessage('Error al finalizar la historia', 'error');
+        console.error(error);
+        throw error; // Relanzar para que advanceStep maneje el error
+      } finally {
+        this.isLoading = false;
+        this.userInput = ''; // Limpiar input después de finalizar
+      }
+    },
     async advanceStep() {
       if (this.isLoading) return;
 
@@ -234,12 +258,20 @@ export default {
           });
         }
       } else if (this.currentStep === 'testingStrategy') {
-        this.setCurrentStep('finished');
-        // Mensaje de finalización
-        this.addMessage({
-          text: '¡Proceso completado! Puedes revisar el resultado final.',
-          sender: 'system'
-        });
+        this.isLoading = true;
+        try {
+          // Llamar al método de finalización de historia
+          await this.finalizeStory();
+          // Establecer el estado como finalizado después de la llamada exitosa
+          this.setCurrentStep('finished');
+        } catch (error) {
+          // Manejar cualquier error en la finalización
+          this.showToastMessage('Error al finalizar la historia', 'error');
+          console.error(error);
+        } finally {
+          this.isLoading = false;
+        }
+        this.focusInput();
       }
       this.focusInput();
     },
