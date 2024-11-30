@@ -66,21 +66,21 @@ class FinalizeStoryRequest(BaseModel):
 Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.
 
 Criterios de Aceptación Funcionales:
-Given un usuario registrado
-When intenta iniciar sesión con credenciales correctas
-Then debe obtener acceso a su cuenta
-And ver sus datos personales
+Dado un usuario registrado
+Cuando intenta iniciar sesión con credenciales correctas
+Entonces debe obtener acceso a su cuenta
+Y ver sus datos personales
 
-Given un usuario
-When intenta iniciar sesión con credenciales incorrectas
-Then debe recibir un mensaje de error
-And se debe registrar el intento fallido
+Dado un usuario
+Cuando intenta iniciar sesión con credenciales incorrectas
+Entonces debe recibir un mensaje de error
+Y se debe registrar el intento fallido
 
 Tests Funcionales:
-Given un usuario bloqueado por múltiples intentos fallidos
-When intenta iniciar sesión con credenciales correctas
-Then debe recibir un mensaje indicando que su cuenta está bloqueada
-And debe proporcionarse instrucciones para desbloquear la cuenta
+Dado un usuario bloqueado por múltiples intentos fallidos
+Cuando intenta iniciar sesión con credenciales correctas
+Entonces debe recibir un mensaje indicando que su cuenta está bloqueada
+Y debe proporcionarse instrucciones para desbloquear la cuenta
 
 Criterios de Aceptación de Testing:
 1. Implementar pruebas unitarias para la validación de credenciales
@@ -140,21 +140,21 @@ class FinalizeStoryResponse(BaseModel):
 Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.
 
 Criterios de Aceptación Funcionales:
-Given un usuario registrado
-When intenta iniciar sesión con credenciales correctas
-Then debe obtener acceso a su cuenta
-And ver sus datos personales
+Dado un usuario registrado
+Cuando intenta iniciar sesión con credenciales correctas
+Entonces debe obtener acceso a su cuenta
+Y ver sus datos personales
 
-Given un usuario
-When intenta recuperar su contraseña
-Then debe recibir un enlace de recuperación por correo
-And el enlace debe expirar después de 24 horas
+Dado un usuario
+Cuando intenta recuperar su contraseña
+Entonces debe recibir un enlace de recuperación por correo
+Y el enlace debe expirar después de 24 horas
 
 Tests Funcionales:
-Given un usuario con autenticación de dos factores activada
-When inicia sesión con credenciales correctas
-Then debe solicitarse el código de verificación
-And debe validarse el código antes de permitir el acceso
+Dado un usuario con autenticación de dos factores activada
+Cuando inicia sesión con credenciales correctas
+Entonces debe solicitarse el código de verificación
+Y debe validarse el código antes de permitir el acceso
 
 Criterios de Aceptación de Testing:
 1. Implementar pruebas unitarias para validación de credenciales y 2FA

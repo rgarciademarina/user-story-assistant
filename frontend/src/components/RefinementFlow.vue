@@ -50,8 +50,9 @@
           />
           <button
             @click="fetchJiraStory"
-            :disabled="!isValidJiraId || isLoadingJira"
+            :disabled="isJiraButtonDisabled"
             class="jira-button"
+            data-test="jira-button"
           >
             {{ isLoadingJira ? 'Recuperando...' : 'Recuperar historia' }}
           </button>
@@ -67,7 +68,7 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex';
+import { mapState, mapActions, mapMutations } from 'vuex';
 import ChatMessage from './ChatMessage.vue';
 import ToastNotification from './ToastNotification.vue';
 
@@ -79,16 +80,15 @@ export default {
   data() {
     return {
       userInput: '',
-      isLoading: false,
       jiraStoryId: '',
-      isLoadingJira: false,
+      isLoading: false,
       showToast: false,
       toastMessage: '',
       toastType: 'info',
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies', 'isLoadingJira']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -98,7 +98,7 @@ export default {
         case 'testingStrategy':
           return 'Testing';
         case 'finished':
-          return 'Proceso Completado';
+          return 'Finalizado';
         default:
           return '';
       }
@@ -106,22 +106,19 @@ export default {
     nextButtonLabel() {
       if (this.currentStep === 'refineStory') return 'Casos Esquina';
       if (this.currentStep === 'cornerCases') return 'Testing';
-      if (this.currentStep === 'testingStrategy') return 'Finalizar';
+      if (this.currentStep === 'testingStrategy') return 'Composición';
       return null;
     },
     backButtonLabel() {
       if (this.currentStep === 'cornerCases') return 'Refinamiento';
       if (this.currentStep === 'testingStrategy') return 'Casos Esquina';
+      if (this.currentStep === 'finished') return 'Testing';
       return null;
     },
     advanceButtonClass() {
       return this.currentStep === 'testingStrategy' ? 'finish-button' : 'next-button';
     },
     canAdvance() {
-      if (this.currentStep === 'refineStory') {
-        // Solo permitir avanzar si hay una historia refinada
-        return !!this.refinedStory;
-      }
       return true;
     },
     inputPlaceholder() {
@@ -130,36 +127,37 @@ export default {
     isValidJiraId() {
       return /^[A-Z]+-\d+$/.test(this.jiraStoryId.trim());
     },
+    isJiraButtonDisabled() {
+      return !this.isValidJiraId || this.isLoadingJira;
+    },
   },
   methods: {
-    ...mapActions([
-      'refineStory',
-      'identifyCornerCases',
-      'proposeTestingStrategy',
-      'addMessage',
-      'resetProcess',
-      'setCurrentStep',
-    ]),
+    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory']),
+    ...mapMutations(['setLoadingJira']),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
 
-      // Agregar el mensaje del usuario al historial
-      this.addMessage({ text: this.userInput, sender: 'user' });
-      const feedback = this.userInput;
-      this.userInput = '';
       this.isLoading = true;
-
       try {
-        if (this.currentStep === 'refineStory') {
-          await this.handleRefineFeedback(feedback);
-        } else if (this.currentStep === 'cornerCases') {
-          await this.handleCornerCasesFeedback(feedback);
-        } else if (this.currentStep === 'testingStrategy') {
-          await this.handleTestingStrategyFeedback(feedback);
+        switch (this.currentStep) {
+          case 'refineStory':
+            await this.handleRefineFeedback(this.userInput);
+            break;
+          case 'cornerCases':
+            await this.handleCornerCasesFeedback(this.userInput);
+            break;
+          case 'testingStrategy':
+            await this.handleTestingStrategyFeedback(this.userInput);
+            break;
+          default:
+            console.warn('Paso no manejado:', this.currentStep);
         }
+        this.userInput = '';
+      } catch (error) {
+        console.error('Error al procesar feedback:', error);
+        this.showToastMessage('Error al procesar el feedback', 'error');
       } finally {
         this.isLoading = false;
-        this.focusInput();
       }
     },
     async handleRefineFeedback(feedback) {
@@ -198,6 +196,29 @@ export default {
         this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
       }
     },
+    async finalizeStory() {
+      this.isLoading = true;
+      try {
+        const result = await this.$store.dispatch('finalizeStory', {
+          feedback: this.userInput || ''
+        });
+        
+        // Mostrar respuesta del backend
+        if (result && result.finalizationResponse) {
+          this.addMessage({ 
+            text: result.finalizationResponse, 
+            sender: 'assistant' 
+          });
+        }
+      } catch (error) {
+        this.showToastMessage('Error al finalizar la historia', 'error');
+        console.error(error);
+        throw error; // Relanzar para que advanceStep maneje el error
+      } finally {
+        this.isLoading = false;
+        this.userInput = ''; // Limpiar input después de finalizar
+      }
+    },
     async advanceStep() {
       if (this.isLoading) return;
 
@@ -234,12 +255,25 @@ export default {
           });
         }
       } else if (this.currentStep === 'testingStrategy') {
-        this.setCurrentStep('finished');
-        // Mensaje de finalización
-        this.addMessage({
-          text: '¡Proceso completado! Puedes revisar el resultado final.',
-          sender: 'system'
-        });
+        this.isLoading = true;
+        try {
+          // Llamar al método de finalización de historia
+          await this.finalizeStory();
+          // Agregar mensaje de composición
+          this.addMessage({
+            text: 'Has llegado a la fase de composición final. Aquí puedes proporcionar feedback adicional para mejorar la historia de usuario. Si estás satisfecho con el resultado, puedes continuar.',
+            sender: 'system'
+          });
+          // Cambiar el estado a "finished" para permitir envío de feedback adicional
+          this.setCurrentStep('finished');
+        } catch (error) {
+          // Manejar cualquier error en la finalización
+          this.showToastMessage('Error al finalizar la historia', 'error');
+          console.error(error);
+        } finally {
+          this.isLoading = false;
+        }
+        this.focusInput();
       }
       this.focusInput();
     },
@@ -248,18 +282,21 @@ export default {
         this.setCurrentStep('refineStory');
       } else if (this.currentStep === 'testingStrategy') {
         this.setCurrentStep('cornerCases');
+      } else if (this.currentStep === 'finished') {
+        this.setCurrentStep('testingStrategy');
       }
       this.focusInput();
     },
     focusInput() {
-      this.$nextTick(() => {
-        if (this.$refs.feedbackInput && this.currentStep !== 'finished') {
+      // Asegurarnos de que el textarea existe y no está deshabilitado
+      if (this.$refs.feedbackInput && !this.isLoading) {
+        this.$nextTick(() => {
           this.$refs.feedbackInput.focus();
-        }
-      });
+        });
+      }
     },
     async fetchJiraStory() {
-      this.isLoadingJira = true;
+      this.setLoadingJira(true);
       try {
         const response = await fetch(`/api/v1/jira/story/${this.jiraStoryId}`);
         if (!response.ok) {
@@ -271,7 +308,7 @@ export default {
       } catch (error) {
         this.showToastMessage(error.message, 'error');
       } finally {
-        this.isLoadingJira = false;
+        this.setLoadingJira(false);
       }
     },
     showToastMessage(message, type = 'info') {

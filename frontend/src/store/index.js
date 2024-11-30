@@ -135,6 +135,35 @@ export default createStore({
       const testingStrategyResponse = `**Estrategias de Testing Propuestas:**\n${testingStrategies.join('\n')}\n\n**Análisis de Cambios:**\n${response.data.testing_feedback}`;
       return { testingStrategyResponse };
     },
+    async finalizeStory({ commit, state }, { feedback }) {
+      const payload = {
+        refined_story: state.refinedStory,
+        corner_cases: state.cornerCases,
+        testing_strategy: state.testingStrategies,
+        feedback: feedback || ''
+      };
+      
+      if (state.sessionId) {
+        payload.session_id = state.sessionId;
+      }
+
+      const response = await axios.post('/api/v1/finalize_story', payload);
+      
+      // Mantener consistencia con otros métodos
+      if (response.data.session_id) {
+        commit('setSessionId', response.data.session_id);
+      }
+
+      // Preparar respuesta para mostrar al usuario
+      let finalizationResponse = response.data.finalized_story;
+      
+      // Si hay feedback, añadirlo como parte de la respuesta
+      if (response.data.feedback && response.data.feedback.trim()) {
+        finalizationResponse += '\n\n' + response.data.feedback;
+      }
+      
+      return { finalizationResponse };
+    },
   },
   plugins: [createPersistedState()],
 });

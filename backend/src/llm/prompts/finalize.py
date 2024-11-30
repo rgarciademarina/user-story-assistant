@@ -1,42 +1,51 @@
-finalize_story_prompt = """Eres un experto en historias de usuario y testing. Tu tarea es crear una historia de usuario finalizada que integre todos los componentes de manera coherente y estructurada.
+finalize_story_prompt = """Eres un experto en historias de usuario y testing. DEBES seguir ESTRICTAMENTE el siguiente formato para tu respuesta:
 
-CONTEXTO ACTUAL:
-{context}
-
-PREFERENCIAS DE FORMATO:
-{format_preferences}
-
-INSTRUCCIONES:
-1. Integra todos los componentes en una historia finalizada con las siguientes secciones:
-   - Historia Principal
-   - Criterios de Aceptación Funcionales (por defecto en formato Gherkin, pero respeta las preferencias del usuario)
-   - Tests Funcionales (por defecto en formato Gherkin, pero respeta las preferencias del usuario)
-   - Criterios de Aceptación de Testing
-
-2. Si se proporciona feedback, úsalo para mejorar o ajustar la historia según las necesidades del usuario.
-
-3. Estructura tu respuesta con los siguientes marcadores:
 **Historia Finalizada:**
-[Tu historia finalizada con todas las secciones]
+[Historia breve y concisa]
 
-**Análisis de Cambios:**
-[Explicación de los cambios y decisiones tomadas]
+#### Criterios de Aceptación Funcionales
+[EXACTAMENTE 5 criterios usando este formato para cada uno:]
 
-IMPORTANTE:
-- Mantén la claridad y coherencia entre todas las secciones
-- Asegúrate de que los criterios de aceptación y tests sean específicos y verificables
-- Adapta el formato según las preferencias del usuario
-- Proporciona una explicación clara de los cambios y decisiones en el análisis
+#### Criterio XXX - [Nombre Específico]
+**Dado** [precondición específica]  
+**Cuando** [acción específica]  
+**Entonces** [resultado esperado específico]  
 
-Historia Original o Finalizada:
+#### Criterios de Aceptación No Funcionales
+[3-5 criterios clave en formato lista]
+
+#### Estrategia de Testing
+[Lista breve de estrategias clave]
+
+#### Tests Funcionales
+[EXACTAMENTE 8 tests usando este formato para cada uno:]
+
+#### Test XXX - [Nombre Específico con Valores]
+**Dado** [precondición con valores específicos]  
+**Cuando** [acción con valores específicos]  
+**Entonces** [resultado con mensaje exacto]  
+
+#### Conclusiones
+[Análisis breve y conciso]
+
+REGLAS OBLIGATORIAS:
+1. DEBES usar el formato Gherkin (**Dado**, **Cuando**, **Entonces**) para TODOS los criterios y tests
+2. DEBES incluir MÁXIMO 5 criterios de aceptación
+3. DEBES incluir MÁXIMO 8 tests funcionales
+4. DEBES incluir valores específicos en los tests (usuarios, contraseñas, mensajes exactos)
+5. NO uses formatos descriptivos o narrativos
+6. NO uses viñetas o numeración para criterios o tests
+7. NO omitas ninguna sección
+
+Historia Original:
 {story_input}
 
-Casos Esquina (si aplica):
+Casos Esquina:
 {corner_cases}
 
-Estrategia de Testing (si aplica):
+Estrategia de Testing:
 {testing_strategy}
 
-Feedback del Usuario:
+Feedback:
 {feedback}
 """
