@@ -5,9 +5,11 @@ from uuid import UUID
 from datetime import datetime
 
 class ProcessState(Enum):
+    INITIAL = "initial"
     REFINEMENT = "refinement"
     CORNER_CASES = "corner_cases"
     TESTING_STRATEGY = "testing_strategy"
+    FINALIZATION = "finalization"
 
 @dataclass
 class Interaction:
@@ -19,13 +21,16 @@ class Interaction:
 @dataclass
 class Session:
     session_id: UUID
-    current_state: ProcessState = ProcessState.REFINEMENT
-    interactions: List[Interaction] = field(default_factory=list)
+    state: ProcessState = ProcessState.INITIAL
     refined_story: Optional[str] = None
-    corner_cases: List[str] = field(default_factory=list)
+    refinement_feedback: Optional[str] = None
+    corner_cases: Optional[List[str]] = None
     corner_cases_feedback: Optional[str] = None
-    testing_strategy: List[str] = field(default_factory=list)
+    testing_strategy: Optional[List[str]] = None
     testing_strategy_feedback: Optional[str] = None
+    finalized_story: Optional[str] = None
+    finalization_feedback: Optional[str] = None
+    interactions: List[Interaction] = field(default_factory=list)
 
     def add_interaction(self, human_message: str, ai_message: str, process_state: ProcessState):
         """Añade una nueva interacción a la sesión."""
