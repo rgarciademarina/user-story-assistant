@@ -51,13 +51,19 @@ const createVuexStore = () => {
         commit('resetProcess');
       },
       refineStory: jest.fn().mockResolvedValue({
-        refinementResponse: 'Mocked refinement response'
+        refinementResponse: 'Historia refinada'
       }),
       identifyCornerCases: jest.fn().mockResolvedValue({
-        cornerCasesResponse: 'Mocked corner cases response'
+        cornerCasesResponse: 'Casos esquina identificados'
       }),
       proposeTestingStrategy: jest.fn().mockResolvedValue({
-        testingStrategyResponse: 'Mocked testing strategy response'
+        testingStrategyResponse: 'Estrategias de testing propuestas'
+      }),
+      composeStory: jest.fn().mockResolvedValue({
+        compositionResponse: 'Historia compuesta'
+      }),
+      finalizeStory: jest.fn().mockResolvedValue({
+        finalizationResponse: 'Historia finalizada'
       }),
       fetchJiraStory: jest.fn().mockResolvedValue({
         success: true,
@@ -68,8 +74,7 @@ const createVuexStore = () => {
       },
       setRefinedStory({ commit }, story) {
         commit('setRefinedStory', story);
-      },
-      finalizeStory: jest.fn()
+      }
     }
   })
 }
@@ -210,9 +215,26 @@ describe('RefinementFlow.vue', () => {
     expect(lastMessage.text).toContain('feedback sobre las estrategias de testing')
   })
 
-  test('avanza desde testingStrategy a finished', async () => {
+  test('avanza desde testingStrategy a composition', async () => {
     // Establecer el estado inicial
     await store.dispatch('setCurrentStep', 'testingStrategy')
+    await store.dispatch('setRefinedStory', 'Test story')
+    
+    // Intentar avanzar
+    await wrapper.vm.advanceStep()
+    
+    // Verificar que avanzó al siguiente paso
+    expect(store.state.currentStep).toBe('composition')
+    
+    // Verificar que se agregó el mensaje del sistema
+    const lastMessage = store.state.messages[store.state.messages.length - 1]
+    expect(lastMessage.sender).toBe('system')
+    expect(lastMessage.text).toContain('Has llegado a la fase de composición')
+  })
+
+  test('avanza desde composition a finished', async () => {
+    // Establecer el estado inicial
+    await store.dispatch('setCurrentStep', 'composition')
     await store.dispatch('setRefinedStory', 'Test story')
     
     // Intentar avanzar
@@ -224,7 +246,7 @@ describe('RefinementFlow.vue', () => {
     // Verificar que se agregó el mensaje de finalización
     const lastMessage = store.state.messages[store.state.messages.length - 1]
     expect(lastMessage.sender).toBe('system')
-    expect(lastMessage.text).toContain('Has llegado a la fase de composición final')
+    expect(lastMessage.text).toContain('La historia ha sido finalizada')
   })
 
   test('maneja el retroceso correctamente', async () => {
@@ -483,10 +505,10 @@ describe('RefinementFlow.vue', () => {
     store.state.refinedStory = 'Historia refinada';
     await wrapper.vm.advanceStep();
     
-    expect(store.state.currentStep).toBe('finished');
+    expect(store.state.currentStep).toBe('composition');
     const messages = wrapper.vm.messages;
     const lastMessage = messages[messages.length - 1];
-    expect(lastMessage.text).toContain('Has llegado a la fase de composición final');
+    expect(lastMessage.text).toContain('Has llegado a la fase de composición');
     expect(lastMessage.sender).toBe('system');
   });
 

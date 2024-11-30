@@ -97,6 +97,8 @@ export default {
           return 'Casos Esquina';
         case 'testingStrategy':
           return 'Testing';
+        case 'composition':
+          return 'Composición';
         case 'finished':
           return 'Finalizado';
         default:
@@ -107,16 +109,18 @@ export default {
       if (this.currentStep === 'refineStory') return 'Casos Esquina';
       if (this.currentStep === 'cornerCases') return 'Testing';
       if (this.currentStep === 'testingStrategy') return 'Composición';
+      if (this.currentStep === 'composition') return 'Finalizar';
       return null;
     },
     backButtonLabel() {
       if (this.currentStep === 'cornerCases') return 'Refinamiento';
       if (this.currentStep === 'testingStrategy') return 'Casos Esquina';
-      if (this.currentStep === 'finished') return 'Testing';
+      if (this.currentStep === 'composition') return 'Testing';
+      if (this.currentStep === 'finished') return 'Composición';
       return null;
     },
     advanceButtonClass() {
-      return this.currentStep === 'testingStrategy' ? 'finish-button' : 'next-button';
+      return this.currentStep === 'testingStrategy' ? 'next-button' : 'finish-button';
     },
     canAdvance() {
       return true;
@@ -132,7 +136,7 @@ export default {
     },
   },
   methods: {
-    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory']),
+    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory', 'composeStory']),
     ...mapMutations(['setLoadingJira']),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
@@ -148,6 +152,9 @@ export default {
             break;
           case 'testingStrategy':
             await this.handleTestingStrategyFeedback(this.userInput);
+            break;
+          case 'composition':
+            await this.handleCompositionFeedback(this.userInput);
             break;
           default:
             console.warn('Paso no manejado:', this.currentStep);
@@ -194,6 +201,12 @@ export default {
       const result = await this.proposeTestingStrategy(payload);
       if (result && result.testingStrategyResponse !== undefined) {
         this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
+      }
+    },
+    async handleCompositionFeedback(feedback = '') {
+      const result = await this.$store.dispatch('composeStory', feedback);
+      if (result && result.compositionResponse) {
+        this.addMessage({ text: result.compositionResponse, sender: 'assistant' });
       }
     },
     async finalizeStory() {
@@ -255,17 +268,31 @@ export default {
           });
         }
       } else if (this.currentStep === 'testingStrategy') {
+        this.setCurrentStep('composition');
+        this.isLoading = true;
+        try {
+          // Obtener la composición inicial
+          await this.handleCompositionFeedback('');
+          // Agregar mensaje de composición
+          this.addMessage({
+            text: 'Has llegado a la fase de composición. Aquí puedes proporcionar feedback adicional para mejorar la historia de usuario. Cuando estés satisfecho, puedes avanzar para finalizar.',
+            sender: 'system'
+          });
+        } finally {
+          this.isLoading = false;
+        }
+      } else if (this.currentStep === 'composition') {
         this.isLoading = true;
         try {
           // Llamar al método de finalización de historia
           await this.finalizeStory();
-          // Agregar mensaje de composición
+          // Cambiar el estado a "finished"
+          this.setCurrentStep('finished');
+          // Agregar mensaje de finalización
           this.addMessage({
-            text: 'Has llegado a la fase de composición final. Aquí puedes proporcionar feedback adicional para mejorar la historia de usuario. Si estás satisfecho con el resultado, puedes continuar.',
+            text: 'La historia ha sido finalizada. Puedes revisar todo el proceso o cerrar la ventana.',
             sender: 'system'
           });
-          // Cambiar el estado a "finished" para permitir envío de feedback adicional
-          this.setCurrentStep('finished');
         } catch (error) {
           // Manejar cualquier error en la finalización
           this.showToastMessage('Error al finalizar la historia', 'error');
@@ -282,8 +309,10 @@ export default {
         this.setCurrentStep('refineStory');
       } else if (this.currentStep === 'testingStrategy') {
         this.setCurrentStep('cornerCases');
-      } else if (this.currentStep === 'finished') {
+      } else if (this.currentStep === 'composition') {
         this.setCurrentStep('testingStrategy');
+      } else if (this.currentStep === 'finished') {
+        this.setCurrentStep('composition');
       }
       this.focusInput();
     },

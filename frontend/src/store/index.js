@@ -164,6 +164,33 @@ export default createStore({
       
       return { finalizationResponse };
     },
+    async composeStory({ commit, state }, feedback = '') {
+      const payload = {
+        refined_story: state.refinedStory,
+        corner_cases: state.cornerCases,
+        testing_strategy: state.testingStrategies,
+        feedback: feedback || ''
+      };
+      
+      if (state.sessionId) {
+        payload.session_id = state.sessionId;
+      }
+
+      const response = await axios.post('/api/v1/finalize_story', payload);
+      
+      // Mantener consistencia con otros métodos
+      if (response.data.session_id) {
+        commit('setSessionId', response.data.session_id);
+      }
+
+      // Preparar la respuesta para mostrar al usuario
+      let compositionResponse = response.data.finalized_story;
+      if (response.data.feedback) {
+        compositionResponse += '\n\n**Feedback:**\n' + response.data.feedback;
+      }
+      
+      return { compositionResponse };
+    },
   },
   plugins: [createPersistedState()],
 });
