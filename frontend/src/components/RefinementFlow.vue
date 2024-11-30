@@ -50,8 +50,9 @@
           />
           <button
             @click="fetchJiraStory"
-            :disabled="!isValidJiraId || isLoadingJira"
+            :disabled="isJiraButtonDisabled"
             class="jira-button"
+            data-test="jira-button"
           >
             {{ isLoadingJira ? 'Recuperando...' : 'Recuperar historia' }}
           </button>
@@ -67,7 +68,7 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex';
+import { mapState, mapActions, mapMutations } from 'vuex';
 import ChatMessage from './ChatMessage.vue';
 import ToastNotification from './ToastNotification.vue';
 
@@ -79,16 +80,15 @@ export default {
   data() {
     return {
       userInput: '',
-      isLoading: false,
       jiraStoryId: '',
-      isLoadingJira: false,
+      isLoading: false,
       showToast: false,
       toastMessage: '',
       toastType: 'info',
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies', 'isLoadingJira']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -98,7 +98,7 @@ export default {
         case 'testingStrategy':
           return 'Testing';
         case 'finished':
-          return 'Composición Final';
+          return 'Finalizado';
         default:
           return '';
       }
@@ -127,48 +127,37 @@ export default {
     isValidJiraId() {
       return /^[A-Z]+-\d+$/.test(this.jiraStoryId.trim());
     },
+    isJiraButtonDisabled() {
+      return !this.isValidJiraId || this.isLoadingJira;
+    },
   },
   methods: {
-    ...mapActions([
-      'refineStory',
-      'identifyCornerCases',
-      'proposeTestingStrategy',
-      'finalizeStory',
-      'addMessage',
-      'resetProcess',
-      'setCurrentStep',
-    ]),
+    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory']),
+    ...mapMutations(['setLoadingJira']),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
 
-      // Agregar el mensaje del usuario al historial
-      this.addMessage({ text: this.userInput, sender: 'user' });
-      const feedback = this.userInput;
-      this.userInput = '';
       this.isLoading = true;
-
       try {
-        if (this.currentStep === 'refineStory') {
-          await this.handleRefineFeedback(feedback);
-        } else if (this.currentStep === 'cornerCases') {
-          await this.handleCornerCasesFeedback(feedback);
-        } else if (this.currentStep === 'testingStrategy') {
-          await this.handleTestingStrategyFeedback(feedback);
-        } else if (this.currentStep === 'finished') {
-          // Enviar feedback adicional para la composición final
-          const result = await this.$store.dispatch('finalizeStory', { feedback });
-          
-          // Mostrar respuesta del backend
-          if (result && result.finalizationResponse) {
-            this.addMessage({ 
-              text: result.finalizationResponse, 
-              sender: 'assistant' 
-            });
-          }
+        switch (this.currentStep) {
+          case 'refineStory':
+            await this.handleRefineFeedback(this.userInput);
+            break;
+          case 'cornerCases':
+            await this.handleCornerCasesFeedback(this.userInput);
+            break;
+          case 'testingStrategy':
+            await this.handleTestingStrategyFeedback(this.userInput);
+            break;
+          default:
+            console.warn('Paso no manejado:', this.currentStep);
         }
+        this.userInput = '';
+      } catch (error) {
+        console.error('Error al procesar feedback:', error);
+        this.showToastMessage('Error al procesar el feedback', 'error');
       } finally {
         this.isLoading = false;
-        this.focusInput();
       }
     },
     async handleRefineFeedback(feedback) {
@@ -299,14 +288,15 @@ export default {
       this.focusInput();
     },
     focusInput() {
-      this.$nextTick(() => {
-        if (this.$refs.feedbackInput && this.currentStep !== 'finished') {
+      // Asegurarnos de que el textarea existe y no está deshabilitado
+      if (this.$refs.feedbackInput && !this.isLoading) {
+        this.$nextTick(() => {
           this.$refs.feedbackInput.focus();
-        }
-      });
+        });
+      }
     },
     async fetchJiraStory() {
-      this.isLoadingJira = true;
+      this.setLoadingJira(true);
       try {
         const response = await fetch(`/api/v1/jira/story/${this.jiraStoryId}`);
         if (!response.ok) {
@@ -318,7 +308,7 @@ export default {
       } catch (error) {
         this.showToastMessage(error.message, 'error');
       } finally {
-        this.isLoadingJira = false;
+        this.setLoadingJira(false);
       }
     },
     showToastMessage(message, type = 'info') {

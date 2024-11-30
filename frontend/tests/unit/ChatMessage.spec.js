@@ -163,4 +163,42 @@ describe('ChatMessage.vue', () => {
     const renderedContent = wrapper.find('.message-content').html()
     expect(renderedContent).toContain('<p>Contenido seguro</p>')
   })
+
+  test('renderiza correctamente sintaxis Gherkin', () => {
+    const gherkinText = `**Dado** un usuario
+**Cuando** hace algo
+**Entonces** ocurre algo
+**Y** además pasa esto
+
+Característica: Mi feature
+Escenario: Mi escenario
+Esquema del escenario: Mi esquema`;
+
+    const wrapper = createWrapper({
+      sender: 'assistant',
+      text: gherkinText
+    });
+
+    const renderedContent = wrapper.find('.message-content').html();
+    // Verificar palabras clave Gherkin en el bloque de código
+    expect(renderedContent).toContain('<strong class="gherkin-keyword">Dado</strong>');
+    expect(renderedContent).toContain('<strong class="gherkin-keyword">Cuando</strong>');
+    expect(renderedContent).toContain('<strong class="gherkin-keyword">Entonces</strong>');
+    expect(renderedContent).toContain('<strong class="gherkin-keyword">Y</strong>');
+    // Verificar texto plano
+    expect(renderedContent).toContain('Característica: Mi feature');
+    expect(renderedContent).toContain('Escenario: Mi escenario');
+    expect(renderedContent).toContain('Esquema del escenario: Mi esquema');
+  });
+
+  test('maneja texto sin sintaxis Gherkin', () => {
+    const normalText = 'Este es un texto normal sin sintaxis Gherkin';
+    const wrapper = createWrapper({
+      sender: 'assistant',
+      text: normalText
+    });
+
+    const renderedContent = wrapper.find('.message-content').html();
+    expect(renderedContent).toContain('<p>Este es un texto normal sin sintaxis Gherkin</p>');
+  });
 })

@@ -115,3 +115,45 @@
   border-radius: 4px;
   border-left: 3px solid #007bff;
 }
+
+/* Estilos para formato Gherkin */
+.message-content pre {
+  background-color: #2a2a2a;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.message-content code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+}
+
+/* Palabras clave de Gherkin en español */
+.message-content pre code strong {
+  font-weight: bold;
+  color: #42b983;
+}
+
+/* Resaltar palabras clave de Gherkin */
+.message-content pre code:contains("Dado"), 
+.message-content pre code:contains("Cuando"),
+.message-content pre code:contains("Entonces"),
+.message-content pre code:contains("Y") {
+  color: #42b983;
+  font-weight: bold;
+}
+
+/* Sangría para Y (And) */
+.message-content pre code:contains("Y") {
+  padding-left: 1em;
+}
+
+/* Separación entre escenarios */
+.message-content pre + pre {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}

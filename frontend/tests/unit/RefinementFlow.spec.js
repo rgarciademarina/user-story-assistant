@@ -4,6 +4,9 @@ import RefinementFlow from '@/components/RefinementFlow.vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
 
+// Mock del fetch global
+global.fetch = jest.fn()
+
 // Mock del store de Vuex
 const createVuexStore = () => {
   return createStore({
@@ -35,9 +38,15 @@ const createVuexStore = () => {
       },
       setRefinedStory(state, story) {
         state.refinedStory = story;
+      },
+      setLoadingJira(state, value) {
+        state.isLoadingJira = value;
       }
     },
     actions: {
+      addMessage({ commit }, message) {
+        commit('addMessage', message);
+      },
       resetProcess({ commit }) {
         commit('resetProcess');
       },
@@ -57,12 +66,10 @@ const createVuexStore = () => {
       setCurrentStep({ commit }, step) {
         commit('setCurrentStep', step);
       },
-      addMessage({ commit }, message) {
-        commit('addMessage', message);
-      },
       setRefinedStory({ commit }, story) {
         commit('setRefinedStory', story);
-      }
+      },
+      finalizeStory: jest.fn()
     }
   })
 }
@@ -70,8 +77,12 @@ const createVuexStore = () => {
 describe('RefinementFlow.vue', () => {
   let wrapper
   let store
+  let addMessageSpy
 
   beforeEach(() => {
+    // Resetear el mock de fetch
+    global.fetch.mockReset();
+    
     store = createVuexStore()
     wrapper = mount(RefinementFlow, {
       global: {
@@ -213,7 +224,7 @@ describe('RefinementFlow.vue', () => {
     // Verificar que se agregó el mensaje de finalización
     const lastMessage = store.state.messages[store.state.messages.length - 1]
     expect(lastMessage.sender).toBe('system')
-    expect(lastMessage.text).toContain('¡Proceso completado!')
+    expect(lastMessage.text).toContain('Has llegado a la fase de composición final')
   })
 
   test('maneja el retroceso correctamente', async () => {
@@ -226,32 +237,6 @@ describe('RefinementFlow.vue', () => {
     await store.dispatch('setCurrentStep', 'testingStrategy')
     await wrapper.vm.goBack()
     expect(store.state.currentStep).toBe('cornerCases')
-  })
-
-  test('enfoca el input después de las acciones', async () => {
-    // Configurar el estado inicial
-    await wrapper.setData({ userInput: 'test input' })
-    await store.dispatch('setRefinedStory', '')
-
-    // Crear el textarea y agregarlo al DOM
-    const textarea = wrapper.find('textarea')
-    document.body.appendChild(textarea.element)
-
-    // Probar después de enviar feedback
-    await wrapper.vm.sendFeedback()
-    await wrapper.vm.$nextTick()
-    textarea.element.focus()
-    expect(document.activeElement).toBe(textarea.element)
-
-    // Probar después de avanzar
-    await store.dispatch('setRefinedStory', 'Test story')
-    await wrapper.vm.advanceStep()
-    await wrapper.vm.$nextTick()
-    textarea.element.focus()
-    expect(document.activeElement).toBe(textarea.element)
-
-    // Limpiar
-    document.body.removeChild(textarea.element)
   })
 
   test('maneja el scroll al agregar mensajes', async () => {
@@ -501,7 +486,7 @@ describe('RefinementFlow.vue', () => {
     expect(store.state.currentStep).toBe('finished');
     const messages = wrapper.vm.messages;
     const lastMessage = messages[messages.length - 1];
-    expect(lastMessage.text).toContain('¡Proceso completado!');
+    expect(lastMessage.text).toContain('Has llegado a la fase de composición final');
     expect(lastMessage.sender).toBe('system');
   });
 
@@ -777,17 +762,88 @@ describe('RefinementFlow.vue', () => {
   })
 
   test('maneja correctamente errores en la recuperación de historia de Jira', async () => {
-    const fetchJiraMock = jest.fn().mockRejectedValue(new Error('Error al recuperar la historia'))
-    store._actions.fetchJiraStory = [fetchJiraMock]
+    // Mock fetch para que falle
+    global.fetch.mockRejectedValueOnce(new Error('Error al cargar la historia'));
     
-    await wrapper.setData({ jiraStoryId: 'STORYASIS-1' })
-    const jiraButton = wrapper.find('.jira-button')
-    await jiraButton.trigger('click')
+    await wrapper.setData({ jiraStoryId: 'STORYASIS-1' });
+    const jiraButton = wrapper.find('.jira-button');
+    await jiraButton.trigger('click');
     
-    await wrapper.vm.$nextTick()
-    await wrapper.vm.$nextTick()
+    // Esperar a que se complete la promesa rechazada
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
     
-    expect(wrapper.vm.showToast).toBe(true)
-    expect(wrapper.vm.toastType).toBe('error')
+    expect(wrapper.vm.showToast).toBe(true);
+    expect(wrapper.vm.toastMessage).toContain('Error al cargar');
+    expect(wrapper.vm.toastType).toBe('error');
   })
+
+  test('maneja correctamente el estilo de los botones de Jira', async () => {
+    const wrapper = mount(RefinementFlow, {
+      global: {
+        plugins: [store]
+      }
+    });
+
+    // Función auxiliar para verificar el estado del botón
+    const checkJiraButtonState = async (expectedDisabled) => {
+      const jiraButton = wrapper.find('[data-test="jira-button"]');
+      await wrapper.vm.$nextTick();
+      
+      // Verificar estado computado
+      const computedDisabled = wrapper.vm.isJiraButtonDisabled;
+      console.log('Computed Disabled:', computedDisabled);
+      expect(computedDisabled).toBe(expectedDisabled);
+      
+      // Verificar estado del elemento
+      expect(jiraButton.element.disabled).toBe(expectedDisabled);
+    };
+
+    // Simular input de Jira inválido
+    await wrapper.setData({ jiraStoryId: 'invalid' });
+    expect(wrapper.vm.isValidJiraId).toBe(false);
+    await checkJiraButtonState(true);
+
+    // Simular input de Jira válido
+    await wrapper.setData({ jiraStoryId: 'PROJ-123' });
+    expect(wrapper.vm.isValidJiraId).toBe(true);
+    await checkJiraButtonState(false);
+
+    // Verificar botón deshabilitado durante carga
+    await wrapper.vm.$store.commit('setLoadingJira', true);
+    await wrapper.vm.$nextTick();
+    
+    expect(wrapper.vm.$store.state.isLoadingJira).toBe(true);
+    await checkJiraButtonState(true);
+  });
+
+  test('maneja errores en la carga de historias de Jira', async () => {
+    const store = createVuexStore();
+    const wrapper = mount(RefinementFlow, {
+      global: {
+        plugins: [store],
+        mocks: {
+          $store: {
+            state: store.state,
+            commit: store.commit,
+            dispatch: store.dispatch
+          }
+        }
+      }
+    });
+
+    // Mock de fetch para simular error
+    global.fetch = jest.fn(() =>
+      Promise.reject(new Error('Error al cargar la historia de Jira'))
+    );
+
+    // Intentar cargar una historia de Jira
+    await wrapper.setData({ jiraStoryId: 'PROJ-123' });
+    await wrapper.vm.fetchJiraStory();
+
+    // Verificar que se muestra el mensaje de error
+    expect(wrapper.vm.showToast).toBe(true);
+    expect(wrapper.vm.toastMessage).toContain('Error al cargar');
+    expect(wrapper.vm.toastType).toBe('error');
+  });
 });

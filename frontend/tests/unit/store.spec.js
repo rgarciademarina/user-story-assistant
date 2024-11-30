@@ -1,6 +1,6 @@
 import { createStore } from 'vuex';
 import axios from 'axios';
-import store from '@/store';
+import store, { finalizeStory } from '@/store';
 
 // Mock axios
 jest.mock('axios');
@@ -362,6 +362,68 @@ describe('Vuex Store', () => {
       });
       
       expect(testStore.state.sessionId).toBeNull();
+    });
+
+    test('finalizeStory maneja correctamente el feedback y sessionId', async () => {
+      const testStore = createStore({
+        state: {
+          refinedStory: 'Historia refinada',
+          cornerCases: ['Caso 1', 'Caso 2'],
+          testingStrategies: ['Test 1', 'Test 2'],
+          sessionId: 'test-session-123'
+        },
+        mutations: {
+          setSessionId(state, sessionId) {
+            state.sessionId = sessionId;
+          }
+        },
+        actions: {
+          async finalizeStory({ commit, state }, { feedback }) {
+            const payload = {
+              refined_story: state.refinedStory,
+              corner_cases: state.cornerCases,
+              testing_strategy: state.testingStrategies,
+              feedback: feedback || '',
+              session_id: state.sessionId
+            };
+
+            const response = await axios.post('/api/v1/finalize_story', payload);
+            
+            if (response.data.session_id) {
+              commit('setSessionId', response.data.session_id);
+            }
+
+            let finalizationResponse = response.data.finalized_story;
+            if (response.data.feedback && response.data.feedback.trim()) {
+              finalizationResponse += '\n\n' + response.data.feedback;
+            }
+
+            return { finalizationResponse };
+          }
+        }
+      });
+
+      // Mock de axios.post
+      axios.post.mockResolvedValueOnce({
+        data: {
+          session_id: 'new-session-456',
+          finalized_story: 'Historia finalizada',
+          feedback: 'Feedback adicional'
+        }
+      });
+
+      const result = await testStore.dispatch('finalizeStory', { feedback: 'Mi feedback' });
+
+      expect(axios.post).toHaveBeenCalledWith('/api/v1/finalize_story', {
+        refined_story: 'Historia refinada',
+        corner_cases: ['Caso 1', 'Caso 2'],
+        testing_strategy: ['Test 1', 'Test 2'],
+        feedback: 'Mi feedback',
+        session_id: 'test-session-123'
+      });
+
+      expect(testStore.state.sessionId).toBe('new-session-456');
+      expect(result.finalizationResponse).toBe('Historia finalizada\n\nFeedback adicional');
     });
   });
 });
