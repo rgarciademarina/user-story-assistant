@@ -98,7 +98,7 @@ export default {
         case 'testingStrategy':
           return 'Testing';
         case 'finished':
-          return 'Proceso Completado';
+          return 'Composición Final';
         default:
           return '';
       }
@@ -112,16 +112,13 @@ export default {
     backButtonLabel() {
       if (this.currentStep === 'cornerCases') return 'Refinamiento';
       if (this.currentStep === 'testingStrategy') return 'Casos Esquina';
+      if (this.currentStep === 'finished') return 'Testing';
       return null;
     },
     advanceButtonClass() {
       return this.currentStep === 'testingStrategy' ? 'finish-button' : 'next-button';
     },
     canAdvance() {
-      if (this.currentStep === 'refineStory') {
-        // Solo permitir avanzar si hay una historia refinada
-        return !!this.refinedStory;
-      }
       return true;
     },
     inputPlaceholder() {
@@ -157,6 +154,17 @@ export default {
           await this.handleCornerCasesFeedback(feedback);
         } else if (this.currentStep === 'testingStrategy') {
           await this.handleTestingStrategyFeedback(feedback);
+        } else if (this.currentStep === 'finished') {
+          // Enviar feedback adicional para la composición final
+          const result = await this.$store.dispatch('finalizeStory', { feedback });
+          
+          // Mostrar respuesta del backend
+          if (result && result.finalizationResponse) {
+            this.addMessage({ 
+              text: result.finalizationResponse, 
+              sender: 'assistant' 
+            });
+          }
         }
       } finally {
         this.isLoading = false;
@@ -262,7 +270,12 @@ export default {
         try {
           // Llamar al método de finalización de historia
           await this.finalizeStory();
-          // Establecer el estado como finalizado después de la llamada exitosa
+          // Agregar mensaje de composición
+          this.addMessage({
+            text: 'Has llegado a la fase de composición final. Aquí puedes proporcionar feedback adicional para mejorar la historia de usuario. Si estás satisfecho con el resultado, puedes continuar.',
+            sender: 'system'
+          });
+          // Cambiar el estado a "finished" para permitir envío de feedback adicional
           this.setCurrentStep('finished');
         } catch (error) {
           // Manejar cualquier error en la finalización
@@ -280,6 +293,8 @@ export default {
         this.setCurrentStep('refineStory');
       } else if (this.currentStep === 'testingStrategy') {
         this.setCurrentStep('cornerCases');
+      } else if (this.currentStep === 'finished') {
+        this.setCurrentStep('testingStrategy');
       }
       this.focusInput();
     },

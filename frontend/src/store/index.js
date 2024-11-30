@@ -155,7 +155,12 @@ export default createStore({
       }
 
       // Preparar respuesta para mostrar al usuario
-      const finalizationResponse = `**Composición Final:**\n${response.data.finalized_story}\n\n**Comentarios:**\n${response.data.feedback}`;
+      let finalizationResponse = response.data.finalized_story;
+      
+      // Si hay feedback, añadirlo como parte de la respuesta
+      if (response.data.feedback && response.data.feedback.trim()) {
+        finalizationResponse += '\n\n' + response.data.feedback;
+      }
       
       return { finalizationResponse };
     },
