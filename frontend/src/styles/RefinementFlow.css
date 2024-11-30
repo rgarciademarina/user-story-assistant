@@ -102,3 +102,16 @@
   color: #aaa;
   margin-top: 10px;
 }
+
+/* Estilos para el formato Gherkin dentro de los mensajes */
+.message pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: 0;
+  font-family: monospace;
+  background-color: #252525;
+  padding: 1rem;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
