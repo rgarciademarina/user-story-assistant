@@ -150,7 +150,7 @@ async def test_session_state_management(llm_service):
     session = llm_service._get_session(session_id)
     
     # Verificar estado inicial
-    assert session.current_state == ProcessState.REFINEMENT
+    assert session.state == ProcessState.REFINEMENT
     
     # Simular un proceso
     await llm_service._process_step(
@@ -159,12 +159,12 @@ async def test_session_state_management(llm_service):
         input_variables={},
         process_state=ProcessState.CORNER_CASES,
         extract_markers=[],
-        update_session_callback=lambda s, r: setattr(s, 'current_state', ProcessState.CORNER_CASES),
+        update_session_callback=lambda s, r: setattr(s, 'state', ProcessState.CORNER_CASES),
         format_interaction=lambda r: ("human", "ai")
     )
     
     # Verificar cambio de estado
-    assert session.current_state == ProcessState.CORNER_CASES
+    assert session.state == ProcessState.CORNER_CASES
 
 @pytest.mark.asyncio
 async def test_extract_section_with_end_marker(llm_service):
@@ -248,7 +248,7 @@ async def test_refine_story_complete_flow(llm_service):
     session = llm_service._get_session(session_id)
     assert session.refined_story == result["refined_story"]
     assert len(session.interactions) > 0
-    assert session.current_state == ProcessState.REFINEMENT
+    assert session.state == ProcessState.REFINEMENT
 
 @pytest.mark.asyncio
 async def test_identify_corner_cases_complete_flow(llm_service):

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, ConfigDict, ValidationInfo, field_validator, model_validator
 from typing import Optional, List
 from src.dependencies import get_llm_service
 from src.llm.service import LLMService
@@ -21,39 +21,48 @@ class FinalizeStoryRequest(BaseModel):
     session_id: Optional[UUID] = Field(
         None,
         description="ID de sesión para mantener el contexto de la conversación. Si no se proporciona, se creará una nueva sesión.",
-        example="123e4567-e89b-12d3-a456-426614174000"
+        json_schema_extra={
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+        }
     )
     
     # Primera opción: Historia refinada + casos + estrategia
     refined_story: Optional[str] = Field(
         None,
         description="Historia de usuario refinada",
-        example="Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura."
+        json_schema_extra={
+            "example": "Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura."
+        }
     )
     corner_cases: Optional[List[str]] = Field(
         None,
         description="Lista de casos esquina identificados",
-        example=[
-            "Intentos de inicio de sesión con credenciales incorrectas",
-            "Bloqueo de cuenta por múltiples intentos fallidos",
-            "Acceso simultáneo desde múltiples dispositivos"
-        ]
+        json_schema_extra={
+            "example": [
+                "Intentos de inicio de sesión con credenciales incorrectas",
+                "Bloqueo de cuenta por múltiples intentos fallidos",
+                "Acceso simultáneo desde múltiples dispositivos"
+            ]
+        }
     )
     testing_strategy: Optional[List[str]] = Field(
         None,
         description="Lista de estrategias de prueba",
-        example=[
-            "Pruebas unitarias para la validación de credenciales",
-            "Pruebas de integración para el proceso de autenticación",
-            "Pruebas de seguridad para intentos de acceso no autorizado"
-        ]
+        json_schema_extra={
+            "example": [
+                "Pruebas unitarias para la validación de credenciales",
+                "Pruebas de integración para el proceso de autenticación",
+                "Pruebas de seguridad para intentos de acceso no autorizado"
+            ]
+        }
     )
     
     # Segunda opción: Historia finalizada para iteración
     finalized_story: Optional[str] = Field(
         None,
         description="Historia de usuario finalizada para iterar sobre ella",
-        example="""Historia Principal:
+        json_schema_extra={
+            "example": """Historia Principal:
 Como usuario registrado, quiero poder iniciar sesión en mi cuenta usando mi correo electrónico y contraseña para acceder a mis datos personales de manera segura.
 
 Criterios de Aceptación Funcionales:
@@ -77,50 +86,49 @@ Criterios de Aceptación de Testing:
 1. Implementar pruebas unitarias para la validación de credenciales
 2. Realizar pruebas de integración del flujo completo de autenticación
 3. Ejecutar pruebas de seguridad para verificar la protección contra accesos no autorizados"""
+        }
     )
     feedback: Optional[str] = Field(
         None,
         description="Feedback opcional para mejorar la historia",
-        example="Por favor, añadir más criterios relacionados con la recuperación de contraseña y la autenticación de dos factores."
+        json_schema_extra={
+            "example": "Por favor, añadir más criterios relacionados con la recuperación de contraseña y la autenticación de dos factores."
+        }
     )
     format_preferences: Optional[dict] = Field(
         None,
         description="Preferencias de formato para la salida",
-        example={
-            "acceptance_criteria_format": "gherkin",
-            "functional_tests_format": "gherkin"
+        json_schema_extra={
+            "example": {
+                "acceptance_criteria_format": "gherkin",
+                "functional_tests_format": "gherkin"
+            }
         }
     )
 
-    @field_validator('refined_story', 'corner_cases', 'testing_strategy', 'finalized_story')
-    def validate_input_combination(cls, v, info: ValidationInfo):
-        values = info.data
-        field = info.field_name
-        # Si es el campo finalized_story
-        if field == 'finalized_story':
-            if v is not None and any([
-                values.get('refined_story'),
-                values.get('corner_cases'),
-                values.get('testing_strategy')
-            ]):
-                raise ValueError(
-                    "No puedes proporcionar una historia finalizada junto con los componentes individuales. "
-                    "Proporciona solo la historia finalizada O los componentes individuales."
-                )
-        # Si es cualquier otro campo
-        else:
-            if values.get('finalized_story') is not None:
-                raise ValueError(
-                    "No puedes proporcionar componentes individuales cuando ya has proporcionado una historia finalizada. "
-                    "Proporciona solo la historia finalizada O los componentes individuales."
-                )
-            elif field == 'refined_story' and v is None and not values.get('finalized_story'):
+    @model_validator(mode='after')
+    def validate_input_combination(self) -> 'FinalizeStoryRequest':
+        # Si tenemos una historia finalizada, no podemos tener componentes individuales
+        if self.finalized_story is not None and any([
+            self.refined_story,
+            self.corner_cases,
+            self.testing_strategy
+        ]):
+            raise ValueError(
+                "No puedes proporcionar una historia finalizada junto con los componentes individuales. "
+                "Proporciona solo la historia finalizada O los componentes individuales."
+            )
+        
+        # Si no tenemos historia finalizada, necesitamos todos los componentes
+        if self.finalized_story is None:
+            if self.refined_story is None:
                 raise ValueError("Debes proporcionar una historia refinada cuando no proporcionas una historia finalizada")
-            elif field == 'corner_cases' and v is None and not values.get('finalized_story'):
+            if self.corner_cases is None:
                 raise ValueError("Debes proporcionar casos esquina cuando no proporcionas una historia finalizada")
-            elif field == 'testing_strategy' and v is None and not values.get('finalized_story'):
+            if self.testing_strategy is None:
                 raise ValueError("Debes proporcionar estrategia de testing cuando no proporcionas una historia finalizada")
-        return v
+        
+        return self
 
 class FinalizeStoryResponse(BaseModel):
     """Modelo para la respuesta de finalización de historia de usuario"""

@@ -21,7 +21,7 @@ class Interaction:
 @dataclass
 class Session:
     session_id: UUID
-    state: ProcessState = ProcessState.INITIAL
+    state: ProcessState = ProcessState.REFINEMENT
     refined_story: Optional[str] = None
     refinement_feedback: Optional[str] = None
     corner_cases: Optional[List[str]] = None
