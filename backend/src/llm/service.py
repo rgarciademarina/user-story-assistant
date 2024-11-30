@@ -13,6 +13,7 @@ from uuid import uuid4, UUID
 from .prompts.refinement import refinement_prompt
 from .prompts.corner_case import corner_case_prompt
 from .prompts.testing import testing_strategy_prompt
+from .prompts.finalize import finalize_story_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ class LLMService:
         self.refinement_prompt = refinement_prompt
         self.corner_case_prompt = corner_case_prompt
         self.testing_strategy_prompt = testing_strategy_prompt
+        self.finalize_story_prompt = finalize_story_prompt
 
     def create_session(self) -> UUID:
         """Crea una nueva sesión y devuelve su ID."""
@@ -312,6 +314,77 @@ class LLMService:
             return result
         except Exception as e:
             logger.error(f"Error en propose_testing_strategy: {str(e)}")
+            raise
+
+    async def finalize_story(
+        self,
+        session_id: UUID,
+        story_input: str,
+        corner_cases: Optional[List[str]] = None,
+        testing_strategy: Optional[List[str]] = None,
+        feedback: Optional[str] = None,
+        format_preferences: Optional[dict] = None
+    ) -> Dict[str, Any]:
+        """Finaliza una historia de usuario integrando todos los componentes."""
+        try:
+            def update_session(session, result):
+                session.finalized_story = result['finalized_story']
+                session.finalization_feedback = result['feedback']
+
+            def format_interaction(result):
+                human_message = (
+                    "Historia Input:\n{}\n\n"
+                    "Casos Esquina:\n{}\n\n"
+                    "Estrategia de Testing:\n{}\n\n"
+                    "Preferencias de Formato:\n{}\n\n"
+                    "Feedback:\n{}".format(
+                        story_input,
+                        '\n'.join(corner_cases) if corner_cases else 'N/A',
+                        '\n'.join(testing_strategy) if testing_strategy else 'N/A',
+                        str(format_preferences) if format_preferences else 'Formato por defecto',
+                        feedback or 'Sin feedback adicional.'
+                    )
+                )
+
+                ai_message = (
+                    "Historia Finalizada:\n{}\n\n"
+                    "Análisis de Cambios:\n{}".format(
+                        result['finalized_story'],
+                        result['feedback']
+                    )
+                )
+
+                return human_message, ai_message
+
+            def post_process_response(extracted_sections):
+                finalized_story = extracted_sections.get('**Historia Finalizada:**', '').strip()
+                analysis = extracted_sections.get('**Análisis de Cambios:**', '').strip()
+                return {
+                    'finalized_story': finalized_story,
+                    'feedback': analysis
+                }
+
+            result = await self._process_step(
+                session_id=session_id,
+                prompt_template=self.finalize_story_prompt,
+                input_variables={
+                    "context": "Finalización de historia de usuario",
+                    "story_input": story_input,
+                    "corner_cases": '\n'.join(corner_cases) if corner_cases else "N/A",
+                    "testing_strategy": '\n'.join(testing_strategy) if testing_strategy else "N/A",
+                    "feedback": feedback or "Sin feedback adicional.",
+                    "format_preferences": str(format_preferences) if format_preferences else "Formato por defecto"
+                },
+                process_state=ProcessState.FINALIZATION,
+                extract_markers=["**Historia Finalizada:**", "**Análisis de Cambios:**"],
+                update_session_callback=update_session,
+                format_interaction=format_interaction,
+                post_process_response=post_process_response
+            )
+
+            return result
+        except Exception as e:
+            logger.error(f"Error en finalize_story: {str(e)}")
             raise
 
     def _extract_sections(self, text: str, markers: List[str]) -> Dict[str, str]:
