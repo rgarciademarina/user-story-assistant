@@ -425,5 +425,122 @@ describe('Vuex Store', () => {
       expect(testStore.state.sessionId).toBe('new-session-456');
       expect(result.finalizationResponse).toBe('Historia finalizada\n\nFeedback adicional');
     });
+
+    test('composeStory makes the correct API call and returns response', async () => {
+      const feedback = 'Test feedback';
+      const response = {
+        data: {
+          finalized_story: 'Composed story content',
+          feedback: 'Composition feedback',
+          session_id: '123'
+        }
+      };
+
+      axios.post.mockResolvedValue(response);
+
+      // Set some initial state
+      testStore.state.refinedStory = 'Refined story';
+      testStore.state.cornerCases = ['case1', 'case2'];
+      testStore.state.testingStrategies = ['strategy1'];
+
+      const result = await testStore.dispatch('composeStory', feedback);
+
+      // Verify API call
+      expect(axios.post).toHaveBeenCalledWith('/api/v1/finalize_story', {
+        refined_story: 'Refined story',
+        corner_cases: ['case1', 'case2'],
+        testing_strategy: ['strategy1'],
+        feedback: feedback
+      });
+
+      // Verify response handling
+      expect(result.compositionResponse).toContain('Composed story content');
+      expect(result.compositionResponse).toContain('Composition feedback');
+      expect(testStore.state.sessionId).toBe('123');
+    });
+
+    test('composeStory includes session_id in payload when it exists', async () => {
+      const sessionId = '123';
+      testStore.commit('setSessionId', sessionId);
+      
+      const feedback = 'Test feedback';
+      axios.post.mockResolvedValue({
+        data: {
+          finalized_story: 'Story',
+          feedback: 'Feedback'
+        }
+      });
+
+      await testStore.dispatch('composeStory', feedback);
+
+      expect(axios.post).toHaveBeenCalledWith('/api/v1/finalize_story', 
+        expect.objectContaining({
+          session_id: sessionId
+        })
+      );
+    });
+
+    test('composeStory handles empty feedback', async () => {
+      const response = {
+        data: {
+          finalized_story: 'Story content',
+          session_id: '123'
+        }
+      };
+
+      axios.post.mockResolvedValue(response);
+
+      const result = await testStore.dispatch('composeStory');
+
+      expect(axios.post).toHaveBeenCalledWith('/api/v1/finalize_story', 
+        expect.objectContaining({
+          feedback: ''
+        })
+      );
+
+      expect(result.compositionResponse).toBe('Story content');
+    });
+
+    test('composeStory handles API errors', async () => {
+      axios.post.mockRejectedValue(new Error('API Error'));
+
+      await expect(testStore.dispatch('composeStory', 'feedback'))
+        .rejects.toThrow('API Error');
+    });
+
+    test('finalizeStory handles API errors', async () => {
+      axios.post.mockRejectedValue(new Error('API Error'));
+
+      await expect(testStore.dispatch('finalizeStory', { feedback: 'test' }))
+        .rejects.toThrow('API Error');
+    });
+
+    test('refineStory handles API errors', async () => {
+      axios.post.mockRejectedValue(new Error('API Error'));
+
+      await expect(testStore.dispatch('refineStory', { 
+        story: 'test', 
+        feedback: 'test' 
+      })).rejects.toThrow('API Error');
+    });
+
+    test('identifyCornerCases handles API errors', async () => {
+      axios.post.mockRejectedValue(new Error('API Error'));
+
+      await expect(testStore.dispatch('identifyCornerCases', {
+        refinedStory: 'test',
+        feedback: 'test'
+      })).rejects.toThrow('API Error');
+    });
+
+    test('proposeTestingStrategy handles API errors', async () => {
+      axios.post.mockRejectedValue(new Error('API Error'));
+
+      await expect(testStore.dispatch('proposeTestingStrategy', {
+        refinedStory: 'test',
+        cornerCases: [],
+        feedback: 'test'
+      })).rejects.toThrow('API Error');
+    });
   });
 });

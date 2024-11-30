@@ -21,11 +21,12 @@ Teniendo en cuenta la historia refinada, los casos esquina, las estrategias de t
 1. **Actualiza y mejora la lista de estrategias de testing**, asegurándote de incorporar el feedback del usuario.
 2. **Considera las estrategias de testing existentes** y realiza modificaciones o añadidos según sea necesario.
 3. **Proporciona un resumen de los cambios o consideraciones adicionales** que has realizado.
+4. **IMPORTANTE: Limita tu respuesta a un MÁXIMO de 5 estrategias de testing.** Si hay más de 5 estrategias potenciales, selecciona las 5 más críticas o relevantes.
 
 Responde únicamente con las siguientes secciones claramente delimitadas:
 
 **Estrategias de Testing Actualizadas:**
-Aquí van las estrategias de testing actualizadas.
+Aquí van las estrategias de testing actualizadas (máximo 5).
 
 **Análisis de Cambios:**
 Aquí va un resumen de los cambios realizados o consideraciones adicionales.

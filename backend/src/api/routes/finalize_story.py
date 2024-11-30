@@ -5,6 +5,7 @@ from src.dependencies import get_llm_service
 from src.llm.service import LLMService
 from uuid import UUID
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -83,9 +84,10 @@ Entonces debe recibir un mensaje indicando que su cuenta está bloqueada
 Y debe proporcionarse instrucciones para desbloquear la cuenta
 
 Criterios de Aceptación de Testing:
-1. Implementar pruebas unitarias para la validación de credenciales
-2. Realizar pruebas de integración del flujo completo de autenticación
-3. Ejecutar pruebas de seguridad para verificar la protección contra accesos no autorizados"""
+1. Implementar pruebas unitarias para la validación de credenciales y 2FA
+2. Realizar pruebas de integración del flujo completo
+3. Ejecutar pruebas de seguridad y penetración""",
+            "example": "Por favor, añadir más criterios relacionados con la recuperación de contraseña y la autenticación de dos factores."
         }
     )
     feedback: Optional[str] = Field(
@@ -194,26 +196,90 @@ async def finalize_story(
     - Tests Funcionales (formato configurable, Gherkin por defecto)
     - Criterios de Aceptación de Testing
     """
+    # Log the input details with more verbosity
+    logger.info("Finalize Story Request Details:")
+    logger.info(f"Session ID: {request.session_id}")
+    logger.info(f"Refined Story: {request.refined_story}")
+    logger.info(f"Corner Cases: {request.corner_cases}")
+    logger.info(f"Testing Strategy: {request.testing_strategy}")
+    logger.info(f"Feedback: {request.feedback}")
+
     try:
-        session_id = request.session_id or llm_service.create_session()
+        # Convert session_id to UUID, creating a new one if not provided
+        if request.session_id:
+            try:
+                session_id = UUID(str(request.session_id))
+            except ValueError:
+                logger.warning(f"Invalid session_id format: {request.session_id}. Generating new UUID.")
+                session_id = uuid.uuid4()
+        else:
+            session_id = uuid.uuid4()
 
-        # Determinar el input principal basado en el tipo de solicitud
-        story_input = request.finalized_story if request.finalized_story else request.refined_story
-
-        result = await llm_service.finalize_story(
+        # Call LLM service to finalize the story
+        response = await llm_service.finalize_story(
             session_id=session_id,
-            story_input=story_input,
+            story_input=request.refined_story or request.finalized_story,
             corner_cases=request.corner_cases,
             testing_strategy=request.testing_strategy,
-            feedback=request.feedback,
-            format_preferences=request.format_preferences
+            feedback=request.feedback
         )
 
-        return {
-            "session_id": session_id,
-            "finalized_story": result['finalized_story'],
-            "feedback": result['feedback']
-        }
+        # Log the full LLM response for debugging
+        logger.info("Full LLM Response:")
+        logger.info(str(response))
+
+        # Extract the finalized story from the response dictionary
+        finalized_story = response.get('finalized_story', '')
+        feedback = response.get('feedback', '')
+
+        # Detailed logging for functional tests section
+        logger.info("Searching for Functional Tests Section:")
+        
+        # Explicitly log the entire finalized story for inspection
+        logger.info("Full Finalized Story:")
+        logger.info(finalized_story)
+
+        # Check for Functional Tests section
+        tests_section_start = finalized_story.find("#### Tests Funcionales")
+        logger.info(f"Tests Section Start Index: {tests_section_start}")
+
+        # If Tests Funcionales section exists
+        if tests_section_start != -1:
+            # Try to extract the tests section
+            tests_section_end = finalized_story.find("#### Conclusiones", tests_section_start)
+            if tests_section_end == -1:
+                tests_section_end = len(finalized_story)
+            
+            tests_section = finalized_story[tests_section_start:tests_section_end]
+            logger.info("Functional Tests Section Found:")
+            logger.info(tests_section)
+            
+            # Detailed test extraction
+            test_pattern = r"#### Test \d+ - .*"
+            import re
+            test_matches = re.findall(test_pattern, tests_section, re.MULTILINE)
+            
+            logger.info("Detailed Test Extraction:")
+            logger.info(f"Number of Tests Found: {len(test_matches)}")
+            for test in test_matches:
+                logger.info(test)
+            
+            # Log if no tests are found, but don't raise an exception
+            if len(test_matches) == 0:
+                logger.warning("No functional tests found in the Tests Funcionales section.")
+        else:
+            # No Tests Funcionales section found
+            logger.warning("NO 'Tests Funcionales' SECTION FOUND IN THE RESPONSE!")
+
+        # Create and return the response
+        finalized_story_response = FinalizeStoryResponse(
+            session_id=session_id,
+            finalized_story=finalized_story,
+            feedback=feedback
+        )
+
+        return finalized_story_response
+
     except Exception as e:
-        logger.error(f"Error al finalizar la historia: {str(e)}")
+        logger.error(f"Error in finalize_story: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
