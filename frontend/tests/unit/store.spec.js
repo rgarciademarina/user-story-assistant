@@ -81,6 +81,28 @@ describe('Vuex Store', () => {
       expect(testStore.state.testingStrategies).toEqual([]);
       expect(testStore.state.sessionId).toBeNull();
     });
+
+    test('setLoadingJira updates the Jira loading state', () => {
+      testStore.commit('setLoadingJira', true);
+      expect(testStore.state.loadingJira).toBe(true);
+      
+      testStore.commit('setLoadingJira', false);
+      expect(testStore.state.loadingJira).toBe(false);
+    });
+
+    test('setIsReviewModalOpen updates the review modal state', () => {
+      testStore.commit('setIsReviewModalOpen', true);
+      expect(testStore.state.isReviewModalOpen).toBe(true);
+      
+      testStore.commit('setIsReviewModalOpen', false);
+      expect(testStore.state.isReviewModalOpen).toBe(false);
+    });
+
+    test('setJiraStoryId updates the Jira story ID', () => {
+      const jiraStoryId = 'PROJ-123';
+      testStore.commit('setJiraStoryId', jiraStoryId);
+      expect(testStore.state.jiraStoryId).toBe(jiraStoryId);
+    });
   });
 
   describe('actions', () => {
@@ -541,6 +563,76 @@ describe('Vuex Store', () => {
         cornerCases: [],
         feedback: 'test'
       })).rejects.toThrow('API Error');
+    });
+
+    test('updateOrCreateJiraStory creates or updates a Jira story', async () => {
+      const mockJiraResponse = {
+        data: {
+          id: 'PROJ-456',
+          key: 'PROJ-456',
+          self: 'https://example.com/jira/issue/PROJ-456'
+        }
+      };
+
+      axios.post.mockResolvedValue(mockJiraResponse);
+
+      const payload = {
+        content: 'Test Jira story content',
+        jiraId: null
+      };
+
+      await testStore.dispatch('updateOrCreateJiraStory', payload);
+
+      expect(axios.post).toHaveBeenCalledWith('/api/v1/jira/story', {
+        title: 'User Story',
+        description: payload.content
+      });
+      
+      expect(testStore.state.loadingJira).toBe(false);
+    });
+
+    test('finalizeStory completes the story creation process', async () => {
+      const mockFinalizeResponse = {
+        data: {
+          composed_story: 'Final user story content',
+          session_id: '123-final',
+          finalized_story: 'Finalized story content'
+        }
+      };
+
+      axios.post.mockResolvedValue(mockFinalizeResponse);
+
+      const payload = {
+        feedback: 'Final review feedback'
+      };
+
+      await testStore.dispatch('finalizeStory', payload);
+
+      expect(axios.post).toHaveBeenCalledWith('/api/v1/finalize_story', {
+        refined_story: '',
+        corner_cases: [],
+        testing_strategy: [],
+        feedback: payload.feedback
+      });
+
+      // Verificar que el estado se actualiza correctamente
+      expect(testStore.state.sessionId).toBe(mockFinalizeResponse.data.session_id);
+    });
+
+    test('setLoadingJira action updates loading state', () => {
+      testStore.dispatch('setLoadingJira', true);
+      expect(testStore.state.loadingJira).toBe(true);
+      
+      testStore.dispatch('setLoadingJira', false);
+      expect(testStore.state.loadingJira).toBe(false);
+    });
+
+    test('setIsReviewModalOpen action updates review modal state', () => {
+      testStore.dispatch('setIsReviewModalOpen', true);
+      expect(testStore.state.isReviewModalOpen).toBe(true);
+      
+      testStore.dispatch('setIsReviewModalOpen', false);
+      expect(testStore.state.isReviewModalOpen).toBe(false);
     });
   });
 });

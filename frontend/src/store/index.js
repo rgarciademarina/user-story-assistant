@@ -13,7 +13,7 @@ export default createStore({
     sessionId: null,
     isReviewModalOpen: false,
     jiraStoryId: null,
-    isLoadingJira: false,
+    loadingJira: false,
     composedStory: '',
   },
   mutations: {
@@ -22,6 +22,12 @@ export default createStore({
     },
     setCurrentStep(state, step) {
       state.currentStep = step;
+    },
+    setLoadingJira(state, isLoading) {
+      state.loadingJira = isLoading;
+    },
+    setIsReviewModalOpen(state, isOpen) {
+      state.isReviewModalOpen = isOpen;
     },
     setOriginalStory(state, story) {
       state.originalStory = story;
@@ -38,14 +44,8 @@ export default createStore({
     setSessionId(state, sessionId) {
       state.sessionId = sessionId;
     },
-    setIsReviewModalOpen(state, isOpen) {
-      state.isReviewModalOpen = isOpen;
-    },
     setJiraStoryId(state, id) {
       state.jiraStoryId = id;
-    },
-    setIsLoadingJira(state, isLoading) {
-      state.isLoadingJira = isLoading;
     },
     setComposedStory(state, story) {
       state.composedStory = story;
@@ -69,6 +69,12 @@ export default createStore({
     },
     setCurrentStep({ commit }, step) {
       commit('setCurrentStep', step);
+    },
+    setLoadingJira({ commit }, isLoading) {
+      commit('setLoadingJira', isLoading);
+    },
+    setIsReviewModalOpen({ commit }, isOpen) {
+      commit('setIsReviewModalOpen', isOpen);
     },
     resetProcess({ commit }) {
       commit('resetProcess');
@@ -212,7 +218,7 @@ export default createStore({
     },
     async updateOrCreateJiraStory({ commit }, { content, jiraId }) {
       try {
-        commit('setIsLoadingJira', true);
+        commit('setLoadingJira', true);
         const payload = {
           title: 'User Story',
           description: content
@@ -234,7 +240,7 @@ export default createStore({
           error: error.response?.data?.detail || 'Error al procesar la solicitud de Jira'
         };
       } finally {
-        commit('setIsLoadingJira', false);
+        commit('setLoadingJira', false);
       }
     },
   },

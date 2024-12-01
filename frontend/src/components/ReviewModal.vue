@@ -123,7 +123,13 @@ export default {
       return jiraContent;
     },
     updatePreview() {
-      let processedContent = this.localContent;
+      // Verificar que localContent no sea undefined
+      if (!this.localContent) {
+        this.previewContent = '';
+        return;
+      }
+
+      let processedContent = this.localContent || '';
       
       // Procesar encabezados especiales
       processedContent = processedContent.replace(/^####\s+(.*?)$/gm, '<h4>$1</h4>');

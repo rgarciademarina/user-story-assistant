@@ -155,7 +155,7 @@ export default {
   },
   methods: {
     ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory', 'composeStory', 'updateOrCreateJiraStory']),
-    ...mapMutations(['setLoadingJira', 'setIsReviewModalOpen']),
+    ...mapMutations(['setCurrentStep', 'setIsReviewModalOpen', 'setLoadingJira']),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
 
@@ -254,7 +254,29 @@ export default {
       if (this.isLoading) return;
 
       if (this.currentStep === 'composition') {
+        // Abrir modal de revisión
         this.setIsReviewModalOpen(true);
+        
+        // Finalizar la historia
+        this.isLoading = true;
+        try {
+          await this.finalizeStory();
+          
+          // Cambiar explícitamente al estado finished
+          this.setCurrentStep('finished');
+          
+          // Agregar mensaje de finalización
+          this.addMessage({
+            text: 'La historia ha sido finalizada. Puedes revisar todo el proceso o cerrar la ventana.',
+            sender: 'system'
+          });
+        } catch (error) {
+          // Manejar cualquier error en la finalización
+          this.showToastMessage('Error al finalizar la historia', 'error');
+          console.error(error);
+        } finally {
+          this.isLoading = false;
+        }
         return;
       }
 
@@ -304,28 +326,7 @@ export default {
         } finally {
           this.isLoading = false;
         }
-      } else if (this.currentStep === 'finished') {
-        this.isLoading = true;
-        try {
-          // Llamar al método de finalización de historia
-          await this.finalizeStory();
-          // Cambiar el estado a "finished"
-          this.setCurrentStep('finished');
-          // Agregar mensaje de finalización
-          this.addMessage({
-            text: 'La historia ha sido finalizada. Puedes revisar todo el proceso o cerrar la ventana.',
-            sender: 'system'
-          });
-        } catch (error) {
-          // Manejar cualquier error en la finalización
-          this.showToastMessage('Error al finalizar la historia', 'error');
-          console.error(error);
-        } finally {
-          this.isLoading = false;
-        }
-        this.focusInput();
       }
-      this.focusInput();
     },
     goBack() {
       if (this.currentStep === 'cornerCases') {
@@ -348,8 +349,8 @@ export default {
       }
     },
     async fetchJiraStory() {
-      this.setLoadingJira(true);
       try {
+        this.setLoadingJira(true);
         const response = await fetch(`/api/v1/jira/story/${this.jiraStoryId}`);
         if (!response.ok) {
           throw new Error(response.status === 404 ? 'Historia no encontrada' : 'Error al recuperar la historia');
