@@ -18,8 +18,7 @@ corner_case_prompt = PromptTemplate(
     1. **Actualiza y mejora la lista de casos esquina**, asegurándote de incorporar el feedback del usuario.
     2. **Considera los casos esquina existentes** y realiza modificaciones o añadidos según sea necesario.
     3. **Proporciona un resumen de los cambios o consideraciones adicionales** que has realizado.
-    4. **IMPORTANTE: Limita tu respuesta a un MÁXIMO de 10 casos esquina.** Pero si ya estás pasando de 5 casos esquina, solo añade más si son realmente relevantes.
-    5. Si ya existen casos esquina anteriores no añadas nuevos casos ni elimines salvo que explícitamente lo pida el usuario en el feedback.
+    4. **Asegúrate de que todos los casos esquina sean relevantes y necesarios**.
 
     Responde únicamente con las siguientes secciones claramente delimitadas:
 

@@ -47,12 +47,11 @@ finalize_story_prompt = """Eres un experto en historias de usuario y testing. DE
 
 REGLAS ABSOLUTAMENTE OBLIGATORIAS:
 1. FORMATO GHERKIN ESTRICTO para los criterios
-2. MÁXIMO 10 criterios de aceptación (pero intenta que sean menos salvo que sea realmente necesario)
-3. MÁXIMO 10 tests funcionales (pero intenta que sean menos salvo que sea realmente necesario)
-4. VALORES ESPECÍFICOS en tests
-5. NO usar formatos descriptivos
-6. NO usar viñetas o numeración
-7. NINGUNA SECCIÓN PUEDE OMITIRSE
+2. Intenta minimizar el número de criterios de aceptación y tests funcionales, pero no hay un límite máximo estricto.
+3. VALORES ESPECÍFICOS en tests
+4. NO usar formatos descriptivos
+5. NO usar viñetas o numeración
+6. NINGUNA SECCIÓN PUEDE OMITIRSE
 
 Historia Original:
 {story_input}
