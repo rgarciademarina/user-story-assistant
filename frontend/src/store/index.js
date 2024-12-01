@@ -11,6 +11,10 @@ export default createStore({
     cornerCases: [],
     testingStrategies: [],
     sessionId: null,
+    isReviewModalOpen: false,
+    jiraStoryId: null,
+    isLoadingJira: false,
+    composedStory: '',
   },
   mutations: {
     addMessage(state, message) {
@@ -34,6 +38,18 @@ export default createStore({
     setSessionId(state, sessionId) {
       state.sessionId = sessionId;
     },
+    setIsReviewModalOpen(state, isOpen) {
+      state.isReviewModalOpen = isOpen;
+    },
+    setJiraStoryId(state, id) {
+      state.jiraStoryId = id;
+    },
+    setIsLoadingJira(state, isLoading) {
+      state.isLoadingJira = isLoading;
+    },
+    setComposedStory(state, story) {
+      state.composedStory = story;
+    },
     resetProcess(state) {
       state.messages = [];
       state.currentStep = 'refineStory';
@@ -42,6 +58,9 @@ export default createStore({
       state.cornerCases = [];
       state.testingStrategies = [];
       state.sessionId = null;
+      state.jiraStoryId = null;
+      state.isReviewModalOpen = false;
+      state.composedStory = '';
     },
   },
   actions: {
@@ -178,18 +197,39 @@ export default createStore({
 
       const response = await axios.post('/api/v1/finalize_story', payload);
       
-      // Mantener consistencia con otros métodos
       if (response.data.session_id) {
         commit('setSessionId', response.data.session_id);
       }
 
-      // Preparar la respuesta para mostrar al usuario
       let compositionResponse = response.data.finalized_story;
-      if (response.data.feedback) {
-        compositionResponse += '\n\n**Feedback:**\n' + response.data.feedback;
-      }
       
+      if (response.data.feedback && response.data.feedback.trim()) {
+        compositionResponse += '\n\n' + response.data.feedback;
+      }
+
+      commit('setComposedStory', compositionResponse);
       return { compositionResponse };
+    },
+    async updateOrCreateJiraStory({ commit }, { content, jiraId }) {
+      try {
+        commit('setIsLoadingJira', true);
+        const response = await axios.post('/api/jira/story', {
+          title: 'User Story',
+          description: content,
+          story_id: jiraId
+        });
+        
+        commit('setJiraStoryId', response.data.story_id);
+        return { success: true, data: response.data };
+      } catch (error) {
+        console.error('Error updating/creating Jira story:', error);
+        return { 
+          success: false, 
+          error: error.response?.data?.detail || 'Error al procesar la solicitud de Jira'
+        };
+      } finally {
+        commit('setIsLoadingJira', false);
+      }
     },
   },
   plugins: [createPersistedState()],
