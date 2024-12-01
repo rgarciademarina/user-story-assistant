@@ -2,7 +2,7 @@
 
 0. [Ficha del proyecto](#0-ficha-del-proyecto)
 1. [Descripción general del producto](#1-descripción-general-del-producto)
-2. [Configuración del proyecto](#2-configuración-del-proyecto)
+2. [Instalación y Configuración](#2-instalación-y-configuración)
 3. [Arquitectura del sistema](#3-arquitectura-del-sistema)
    - [3.1. Diagrama de arquitectura](#31-diagrama-de-arquitectura)
    - [3.2. Descripción de componentes principales](#32-descripción-de-componentes-principales)
@@ -43,146 +43,14 @@ Un asistente que usará un LLM para ayudar con el proceso de refinamiento de his
 
 ## 1. Descripción general del producto
 
-> Describe en detalle los siguientes aspectos del producto:
-
 El Asistente de Refinamiento de Historias de Usuario es una herramienta basada en IA que asiste a los equipos de desarrollo en la mejora de sus historias de usuario a través de un proceso guiado de tres pasos. Utiliza Ollama con un modelo LLM configurable mediante variables de entorno, permitiendo flexibilidad en la selección del modelo de lenguaje.
 
-### **1.1. Visión General**
+## 2. Instalación y Configuración
 
-El asistente facilita la creación y refinamiento de historias de usuario, asegurando claridad, completitud y calidad en la documentación. A través de su integración con Jira local, permite una gestión eficiente y sincronizada de las historias, detectando casos esquina y sugiriendo estrategias de testing adecuadas.
+Para instrucciones detalladas de instalación y configuración, por favor consulte:
 
-### **1.2. Objetivo del Producto**
-
-Mejorar la calidad y completitud de las historias de usuario mediante:
-
-- Refinamiento de definiciones y criterios de aceptación
-- Identificación proactiva de casos esquina
-- Recomendaciones comprensivas de estrategias de testing
-
-### **1.3. Diseño y experiencia de usuario**
-
-La aplicación sigue un diseño minimalista y centrado en el usuario, con un flujo de trabajo intuitivo dividido en tres pasos principales:
-
-1. **Refinamiento Inicial**
-   - Panel principal con la historia de usuario actual
-   - Editor interactivo para modificar la descripción
-   - Sugerencias contextuales en tiempo real
-   - Validación automática del formato INVEST
-
-2. **Análisis de Casos Esquina**
-   - Visualización de casos detectados
-   - Matriz de impacto/probabilidad
-   - Opciones de aceptación/rechazo de sugerencias
-   - Historial de decisiones tomadas
-
-3. **Estrategia de Testing**
-   - Árbol de casos de prueba sugeridos
-   - Integración con herramientas de testing
-   - Vista previa de cobertura estimada
-   - Exportación de casos de prueba a Jira
-
-La interfaz utiliza un diseño responsive que se adapta a diferentes tamaños de pantalla y dispositivos. Los componentes principales incluyen:
-
-- Barra lateral de navegación con acceso rápido a las diferentes secciones
-- Panel central con el contenido principal y el chat del asistente
-- Barra de herramientas superior con acciones contextuales
-- Panel inferior para historial y sugerencias
-
-El flujo de trabajo está diseñado para ser intuitivo y eficiente:
-1. Selección o creación de una historia de usuario
-2. Proceso de refinamiento guiado por el asistente
-3. Revisión y validación de cambios
-4. Sincronización con Jira
-
----
-
-## 2. Configuración del proyecto
-
-### **2.1. Requisitos Previos**
-
-- Python 3.10 o superior
-- Node.js 20.x o superior
-- Ollama
-- Poetry para gestión de dependencias Python
-- pnpm para gestión de dependencias JavaScript
-
-### **2.2. Instalación y Configuración**
-
-#### Backend
-
-1. **Clonar el Repositorio**
-   ```bash
-   git clone https://github.com/rgarciademarina/user-story-assistant.git
-   cd user-story-assistant
-   ```
-
-2. **Configurar el Entorno Virtual y Dependencias**
-   ```bash
-   poetry install
-   poetry shell
-   ```
-
-3. **Configurar Variables de Entorno**
-   ```bash
-   cp .env.example .env
-   # Editar .env con las siguientes variables:
-   # - LLM_MODEL=llama2  # Modelo configurable de Ollama
-   # - LLM_API_BASE_URL=http://localhost:11434
-   ```
-
-4. **Iniciar el Backend**
-   ```bash
-   poetry run uvicorn backend.main:app --reload --port 8000
-   ```
-
-#### Frontend
-
-1. **Instalar Dependencias**
-   ```bash
-   cd frontend
-   pnpm install
-   ```
-
-2. **Configurar Variables de Entorno del Frontend**
-   ```bash
-   cp .env.example .env
-   # Editar .env con:
-   # - VITE_API_URL=http://localhost:8000
-   ```
-
-3. **Iniciar el Servidor de Desarrollo**
-   ```bash
-   pnpm dev
-   ```
-
-### **2.3. Verificación de la Instalación**
-
-1. **Ejecutar Tests**
-   ```bash
-   # Tests del backend
-   cd backend
-   poetry run pytest
-   
-   # Tests del frontend
-   cd frontend
-   pnpm test
-   ```
-
-2. **Verificar Servicios**
-   - Backend API: http://localhost:8000/docs
-   - Frontend: http://localhost:5173
-
-### **2.4. Problemas Comunes**
-
-1. **Error al cargar el modelo LLM**
-   - Verificar que Ollama está ejecutándose
-   - Comprobar la configuración en `.env`
-   - Asegurar suficiente memoria RAM disponible
-
-2. **Errores de CORS**
-   - Verificar que las URLs en `.env` coinciden
-   - Comprobar que el backend está ejecutándose
-   - Revisar la configuración de CORS
+- [Instrucciones del Backend](./backend/README.md)
+- [Instrucciones del Frontend](./frontend/README.md)
 
 ---
 
