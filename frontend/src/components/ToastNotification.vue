@@ -31,12 +31,15 @@ export default {
 .toast-notification {
   position: fixed;
   top: 20px;
-  right: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 15px 25px;
   border-radius: 4px;
   color: white;
-  z-index: 1000;
+  z-index: 9999;
   animation: slideIn 0.3s ease-out;
+  min-width: 200px;
+  text-align: center;
 }
 
 .success {
@@ -53,11 +56,11 @@ export default {
 
 @keyframes slideIn {
   from {
-    transform: translateX(100%);
+    transform: translate(-50%, -100%);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(-50%);
     opacity: 1;
   }
 }

@@ -11,6 +11,10 @@ export default createStore({
     cornerCases: [],
     testingStrategies: [],
     sessionId: null,
+    isReviewModalOpen: false,
+    jiraStoryId: null,
+    loadingJira: false,
+    composedStory: '',
   },
   mutations: {
     addMessage(state, message) {
@@ -18,6 +22,12 @@ export default createStore({
     },
     setCurrentStep(state, step) {
       state.currentStep = step;
+    },
+    setLoadingJira(state, isLoading) {
+      state.loadingJira = isLoading;
+    },
+    setIsReviewModalOpen(state, isOpen) {
+      state.isReviewModalOpen = isOpen;
     },
     setOriginalStory(state, story) {
       state.originalStory = story;
@@ -34,6 +44,12 @@ export default createStore({
     setSessionId(state, sessionId) {
       state.sessionId = sessionId;
     },
+    setJiraStoryId(state, id) {
+      state.jiraStoryId = id;
+    },
+    setComposedStory(state, story) {
+      state.composedStory = story;
+    },
     resetProcess(state) {
       state.messages = [];
       state.currentStep = 'refineStory';
@@ -42,6 +58,9 @@ export default createStore({
       state.cornerCases = [];
       state.testingStrategies = [];
       state.sessionId = null;
+      state.jiraStoryId = null;
+      state.isReviewModalOpen = false;
+      state.composedStory = '';
     },
   },
   actions: {
@@ -50,6 +69,12 @@ export default createStore({
     },
     setCurrentStep({ commit }, step) {
       commit('setCurrentStep', step);
+    },
+    setLoadingJira({ commit }, isLoading) {
+      commit('setLoadingJira', isLoading);
+    },
+    setIsReviewModalOpen({ commit }, isOpen) {
+      commit('setIsReviewModalOpen', isOpen);
     },
     resetProcess({ commit }) {
       commit('resetProcess');
@@ -178,18 +203,45 @@ export default createStore({
 
       const response = await axios.post('/api/v1/finalize_story', payload);
       
-      // Mantener consistencia con otros métodos
       if (response.data.session_id) {
         commit('setSessionId', response.data.session_id);
       }
 
-      // Preparar la respuesta para mostrar al usuario
       let compositionResponse = response.data.finalized_story;
-      if (response.data.feedback) {
-        compositionResponse += '\n\n**Feedback:**\n' + response.data.feedback;
-      }
       
+      if (response.data.feedback && response.data.feedback.trim()) {
+        compositionResponse += '\n\n' + response.data.feedback;
+      }
+
+      commit('setComposedStory', compositionResponse);
       return { compositionResponse };
+    },
+    async updateOrCreateJiraStory({ commit }, { content, jiraId }) {
+      try {
+        commit('setLoadingJira', true);
+        const payload = {
+          title: 'User Story',
+          description: content
+        };
+
+        // Solo añadir story_id si no está vacío
+        if (jiraId) {
+          payload.story_id = jiraId;
+        }
+
+        const response = await axios.post('/api/v1/jira/story', payload);
+        
+        commit('setJiraStoryId', response.data.story_id);
+        return { success: true, data: response.data };
+      } catch (error) {
+        console.error('Error updating/creating Jira story:', error);
+        return { 
+          success: false, 
+          error: error.response?.data?.detail || 'Error al procesar la solicitud de Jira'
+        };
+      } finally {
+        commit('setLoadingJira', false);
+      }
     },
   },
   plugins: [createPersistedState()],

@@ -18,6 +18,7 @@ class LLMConfig(BaseModel):
     LOG_LEVEL: str = Field(default_factory=lambda: os.getenv('LOG_LEVEL', 'INFO'))
     DEBUG: bool = Field(default_factory=lambda: os.getenv('DEBUG', 'False').lower() == 'true')
     VECTOR_STORE_PATH: str = Field(default_factory=lambda: os.getenv('VECTOR_STORE_PATH', './data/vector_store'))
+    MAX_LENGTH: int = Field(default_factory=lambda: int(os.getenv('MAX_LENGTH', '2048')))
     model_config = {
         "populate_by_name": True,
         "alias_generator": lambda x: x.lower()

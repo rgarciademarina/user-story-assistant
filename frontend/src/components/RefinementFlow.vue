@@ -64,6 +64,14 @@
       :message="toastMessage"
       :type="toastType"
     />
+    <ReviewModal
+      v-model="isReviewModalOpen"
+      :content="composedStory"
+      :existing-jira-id="jiraStoryId"
+      :is-loading-jira="isLoadingJira"
+      @update:modelValue="handleModalVisibility"
+      @jira-action="handleJiraAction"
+    />
   </div>
 </template>
 
@@ -71,11 +79,14 @@
 import { mapState, mapActions, mapMutations } from 'vuex';
 import ChatMessage from './ChatMessage.vue';
 import ToastNotification from './ToastNotification.vue';
+import ReviewModal from './ReviewModal.vue';
 
 export default {
+  name: 'RefinementFlow',
   components: {
     ChatMessage,
     ToastNotification,
+    ReviewModal
   },
   data() {
     return {
@@ -88,7 +99,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies', 'isLoadingJira']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies', 'isLoadingJira', 'jiraStoryId', 'isReviewModalOpen', 'composedStory']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -106,11 +117,18 @@ export default {
       }
     },
     nextButtonLabel() {
-      if (this.currentStep === 'refineStory') return 'Casos Esquina';
-      if (this.currentStep === 'cornerCases') return 'Testing';
-      if (this.currentStep === 'testingStrategy') return 'Composición';
-      if (this.currentStep === 'composition') return 'Finalizar';
-      return null;
+      switch (this.currentStep) {
+        case 'refineStory':
+          return 'Identificar casos límite';
+        case 'cornerCases':
+          return 'Proponer estrategia de pruebas';
+        case 'testingStrategy':
+          return 'Componer';
+        case 'composition':
+          return 'Revisar';
+        default:
+          return '';
+      }
     },
     backButtonLabel() {
       if (this.currentStep === 'cornerCases') return 'Refinamiento';
@@ -136,8 +154,8 @@ export default {
     },
   },
   methods: {
-    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory', 'composeStory']),
-    ...mapMutations(['setLoadingJira']),
+    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory', 'composeStory', 'updateOrCreateJiraStory']),
+    ...mapMutations(['setCurrentStep', 'setIsReviewModalOpen', 'setLoadingJira']),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
 
@@ -235,6 +253,33 @@ export default {
     async advanceStep() {
       if (this.isLoading) return;
 
+      if (this.currentStep === 'composition') {
+        // Abrir modal de revisión
+        this.setIsReviewModalOpen(true);
+        
+        // Finalizar la historia
+        this.isLoading = true;
+        try {
+          await this.finalizeStory();
+          
+          // Cambiar explícitamente al estado finished
+          this.setCurrentStep('finished');
+          
+          // Agregar mensaje de finalización
+          this.addMessage({
+            text: 'La historia ha sido finalizada. Puedes revisar todo el proceso o cerrar la ventana.',
+            sender: 'system'
+          });
+        } catch (error) {
+          // Manejar cualquier error en la finalización
+          this.showToastMessage('Error al finalizar la historia', 'error');
+          console.error(error);
+        } finally {
+          this.isLoading = false;
+        }
+        return;
+      }
+
       if (this.currentStep === 'refineStory') {
         // Verificar que hay una historia refinada antes de avanzar
         if (!this.refinedStory) {
@@ -281,28 +326,7 @@ export default {
         } finally {
           this.isLoading = false;
         }
-      } else if (this.currentStep === 'composition') {
-        this.isLoading = true;
-        try {
-          // Llamar al método de finalización de historia
-          await this.finalizeStory();
-          // Cambiar el estado a "finished"
-          this.setCurrentStep('finished');
-          // Agregar mensaje de finalización
-          this.addMessage({
-            text: 'La historia ha sido finalizada. Puedes revisar todo el proceso o cerrar la ventana.',
-            sender: 'system'
-          });
-        } catch (error) {
-          // Manejar cualquier error en la finalización
-          this.showToastMessage('Error al finalizar la historia', 'error');
-          console.error(error);
-        } finally {
-          this.isLoading = false;
-        }
-        this.focusInput();
       }
-      this.focusInput();
     },
     goBack() {
       if (this.currentStep === 'cornerCases') {
@@ -325,8 +349,8 @@ export default {
       }
     },
     async fetchJiraStory() {
-      this.setLoadingJira(true);
       try {
+        this.setLoadingJira(true);
         const response = await fetch(`/api/v1/jira/story/${this.jiraStoryId}`);
         if (!response.ok) {
           throw new Error(response.status === 404 ? 'Historia no encontrada' : 'Error al recuperar la historia');
@@ -385,6 +409,18 @@ export default {
     addMessage(message) {
       this.$store.dispatch('addMessage', message);
       this.scrollToBottom();
+    },
+    async handleJiraAction({ content, jiraId }) {
+      const result = await this.updateOrCreateJiraStory({ content, jiraId });
+      if (result.success) {
+        const action = result.data.action === 'created' ? 'creada' : 'actualizada';
+        this.showToastMessage(`Historia ${action} correctamente en Jira: ${result.data.story_id}`, 'success');
+      } else {
+        this.showToastMessage(result.error, 'error');
+      }
+    },
+    handleModalVisibility(isOpen) {
+      this.setIsReviewModalOpen(isOpen);
     },
   },
   mounted() {
