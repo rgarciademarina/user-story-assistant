@@ -157,3 +157,46 @@
   padding-top: 1rem;
   border-top: 1px solid #444;
 }
+
+.btn-corner-cases,
+.btn-testing-strategy,
+.btn-review {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-corner-cases:hover,
+.btn-testing-strategy:hover,
+.btn-review:hover {
+  background-color: #218838 !important;
+}
+
+.advance-button.btn-corner-cases,
+.advance-button.btn-testing-strategy,
+.advance-button.btn-review {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  transition: opacity 0.3s ease, background-color 0.3s ease !important;
+}
+
+.advance-button.btn-corner-cases:disabled,
+.advance-button.btn-testing-strategy:disabled,
+.advance-button.btn-review:disabled {
+  background-color: #28a745 !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.advance-button.btn-corner-cases:hover:not(:disabled),
+.advance-button.btn-testing-strategy:hover:not(:disabled),
+.advance-button.btn-review:hover:not(:disabled) {
+  background-color: #218838 !important;
+}

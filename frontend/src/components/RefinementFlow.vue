@@ -34,7 +34,15 @@
           <button
             v-if="currentStep !== 'finished'"
             @click="advanceStep"
-            :class="['advance-button', advanceButtonClass]"
+            :class="[
+              'advance-button',
+              advanceButtonClass,
+              {
+                'btn-corner-cases': currentStep === 'cornerCases' || currentStep === 'refineStory',
+                'btn-testing-strategy': currentStep === 'testingStrategy',
+                'btn-review': currentStep === 'review'
+              }
+            ]"
             :disabled="!canAdvance"
           >
             {{ nextButtonLabel }}
@@ -119,11 +127,11 @@ export default {
     nextButtonLabel() {
       switch (this.currentStep) {
         case 'refineStory':
-          return 'Identificar casos límite';
+          return 'Casos Esquina';
         case 'cornerCases':
-          return 'Proponer estrategia de pruebas';
+          return 'Testing';
         case 'testingStrategy':
-          return 'Componer';
+          return 'Composición';
         case 'composition':
           return 'Revisar';
         default:
@@ -141,7 +149,20 @@ export default {
       return this.currentStep === 'testingStrategy' ? 'next-button' : 'finish-button';
     },
     canAdvance() {
-      return true;
+      switch (this.currentStep) {
+        case 'refineStory':
+          return !!this.refinedStory;
+        case 'cornerCases':
+          return !!this.cornerCases;
+        case 'testingStrategy':
+          return !!this.testingStrategies;
+        case 'review':
+          return true;
+        case 'composition':
+          return !!this.composedStory;
+        default:
+          return false;
+      }
     },
     inputPlaceholder() {
       return this.isLoading ? 'Esperando respuesta...' : 'Escribe tu feedback aquí...';
@@ -178,6 +199,9 @@ export default {
             console.warn('Paso no manejado:', this.currentStep);
         }
         this.userInput = '';
+        this.$nextTick(() => {
+          this.focusInput();
+        });
       } catch (error) {
         console.error('Error al procesar feedback:', error);
         this.showToastMessage('Error al procesar el feedback', 'error');
@@ -502,5 +526,21 @@ export default {
 button {
   padding: 6px 12px;
   font-size: 14px;
+}
+
+/* Estilos para los botones de avance */
+.btn-corner-cases, .btn-testing-strategy, .btn-review {
+  background-color: #34c759;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.btn-corner-cases:disabled, .btn-testing-strategy:disabled, .btn-review:disabled {
+  background-color: #666;
+  cursor: not-allowed;
 }
 </style>

@@ -12,11 +12,12 @@
    - [4.2. Ejecutar Tests Localmente](#42-ejecutar-tests-localmente)
    - [4.3. Requisitos de Calidad](#43-requisitos-de-calidad)
    - [4.4. Proceso de Pull Request](#44-proceso-de-pull-request)
-5. [Modelo de datos](#4-modelo-de-datos)
-6. [Especificación de la API](#5-especificación-de-la-api)
-7. [Historias de usuario](#6-historias-de-usuario)
-8. [Tickets de trabajo](#7-tickets-de-trabajo)
-9. [Pull requests](#8-pull-requests)
+   - [4.5. GitHub Actions Workflow](#45-github-actions-workflow)
+5. [Especificación de la API](#5-especificación-de-la-api)
+6. [Historias de usuario](#6-historias-de-usuario)
+7. [Tickets de trabajo](#7-tickets-de-trabajo)
+8. [Pull requests](#8-pull-requests)
+9. [Roadmap](#9-roadmap)
 
 ---
 
@@ -36,7 +37,7 @@ Un asistente que usará un LLM para ayudar con el proceso de refinamiento de his
 
 ### **0.4. URL del proyecto:**
 
-[https://github.com/rgarciademarina/AI4Devs-finalproject-RGM](https://github.com/rgarciademarina/AI4Devs-finalproject-RGM)
+[https://github.com/rgarciademarina/user-story-assistant](https://github.com/rgarciademarina/user-story-assistant)
 
 ---
 
@@ -44,7 +45,7 @@ Un asistente que usará un LLM para ayudar con el proceso de refinamiento de his
 
 > Describe en detalle los siguientes aspectos del producto:
 
-El Asistente de Refinamiento de Historias de Usuario es una herramienta basada en IA que asiste a los equipos de desarrollo en la mejora de sus historias de usuario a través de un proceso guiado de tres pasos. Utiliza un modelo LLM (Llama 3.2:11b) para proporcionar recomendaciones contextualizadas basadas en el historial del proyecto.
+El Asistente de Refinamiento de Historias de Usuario es una herramienta basada en IA que asiste a los equipos de desarrollo en la mejora de sus historias de usuario a través de un proceso guiado de tres pasos. Utiliza Ollama con un modelo LLM configurable mediante variables de entorno, permitiendo flexibilidad en la selección del modelo de lenguaje.
 
 ### **1.1. Visión General**
 
@@ -60,46 +61,128 @@ Mejorar la calidad y completitud de las historias de usuario mediante:
 
 ### **1.3. Diseño y experiencia de usuario**
 
-Proporciona imágenes y/o videotutorial mostrando la experiencia del usuario desde que aterriza en la aplicación, pasando por todas las funcionalidades principales.
+La aplicación sigue un diseño minimalista y centrado en el usuario, con un flujo de trabajo intuitivo dividido en tres pasos principales:
 
-**TBD**
+1. **Refinamiento Inicial**
+   - Panel principal con la historia de usuario actual
+   - Editor interactivo para modificar la descripción
+   - Sugerencias contextuales en tiempo real
+   - Validación automática del formato INVEST
+
+2. **Análisis de Casos Esquina**
+   - Visualización de casos detectados
+   - Matriz de impacto/probabilidad
+   - Opciones de aceptación/rechazo de sugerencias
+   - Historial de decisiones tomadas
+
+3. **Estrategia de Testing**
+   - Árbol de casos de prueba sugeridos
+   - Integración con herramientas de testing
+   - Vista previa de cobertura estimada
+   - Exportación de casos de prueba a Jira
+
+La interfaz utiliza un diseño responsive que se adapta a diferentes tamaños de pantalla y dispositivos. Los componentes principales incluyen:
+
+- Barra lateral de navegación con acceso rápido a las diferentes secciones
+- Panel central con el contenido principal y el chat del asistente
+- Barra de herramientas superior con acciones contextuales
+- Panel inferior para historial y sugerencias
+
+El flujo de trabajo está diseñado para ser intuitivo y eficiente:
+1. Selección o creación de una historia de usuario
+2. Proceso de refinamiento guiado por el asistente
+3. Revisión y validación de cambios
+4. Sincronización con Jira
 
 ---
 
 ## 2. Configuración del proyecto
 
-### **2.1. Instrucciones de instalación**
+### **2.1. Requisitos Previos**
 
-Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
+- Python 3.10 o superior
+- Node.js 20.x o superior
+- Ollama
+- Poetry para gestión de dependencias Python
+- pnpm para gestión de dependencias JavaScript
+
+### **2.2. Instalación y Configuración**
+
+#### Backend
 
 1. **Clonar el Repositorio**
-
    ```bash
-   git clone https://github.com/rgarciademarina/AI4Devs-finalproject-RGM.git
-   cd AI4Devs-finalproject-RGM
+   git clone https://github.com/rgarciademarina/user-story-assistant.git
+   cd user-story-assistant
    ```
 
-2. **Instalar Dependencias**
-
+2. **Configurar el Entorno Virtual y Dependencias**
    ```bash
    poetry install
+   poetry shell
    ```
 
 3. **Configurar Variables de Entorno**
-
-   Crea un archivo `.env` basado en `.env.example` y completa las variables necesarias.
-
-4. **Ejecutar los Tests**
-
    ```bash
-   poetry run pytest --log-cli-level=DEBUG
+   cp .env.example .env
+   # Editar .env con las siguientes variables:
+   # - LLM_MODEL=llama2  # Modelo configurable de Ollama
+   # - LLM_API_BASE_URL=http://localhost:11434
    ```
 
-5. **Iniciar la Aplicación**
-
+4. **Iniciar el Backend**
    ```bash
-   python src/llm/run_model.py --model llama-3.2-11b
+   poetry run uvicorn backend.main:app --reload --port 8000
    ```
+
+#### Frontend
+
+1. **Instalar Dependencias**
+   ```bash
+   cd frontend
+   pnpm install
+   ```
+
+2. **Configurar Variables de Entorno del Frontend**
+   ```bash
+   cp .env.example .env
+   # Editar .env con:
+   # - VITE_API_URL=http://localhost:8000
+   ```
+
+3. **Iniciar el Servidor de Desarrollo**
+   ```bash
+   pnpm dev
+   ```
+
+### **2.3. Verificación de la Instalación**
+
+1. **Ejecutar Tests**
+   ```bash
+   # Tests del backend
+   cd backend
+   poetry run pytest
+   
+   # Tests del frontend
+   cd frontend
+   pnpm test
+   ```
+
+2. **Verificar Servicios**
+   - Backend API: http://localhost:8000/docs
+   - Frontend: http://localhost:5173
+
+### **2.4. Problemas Comunes**
+
+1. **Error al cargar el modelo LLM**
+   - Verificar que Ollama está ejecutándose
+   - Comprobar la configuración en `.env`
+   - Asegurar suficiente memoria RAM disponible
+
+2. **Errores de CORS**
+   - Verificar que las URLs en `.env` coinciden
+   - Comprobar que el backend está ejecutándose
+   - Revisar la configuración de CORS
 
 ---
 
@@ -107,61 +190,72 @@ Documenta de manera precisa las instrucciones para instalar y poner en marcha el
 
 ### **3.1. Diagrama de arquitectura**
 
-Usa el formato que consideres más adecuado para representar los componentes principales de la aplicación y las tecnologías utilizadas. Explica si sigue algún patrón predefinido, justifica por qué se ha elegido esta arquitectura, y destaca los beneficios principales que aportan al proyecto y justifican su uso, así como sacrificios o déficits que implica.
-
 ```mermaid
 classDiagram
-    class UserStoryAssistant {
-        -LLMService llmService
-        -WorkflowManager workflowManager
-        +processUserStory(storyId: String)
-        +getCurrentStep(): StepStatus
-        +confirmStep(): void
-        +provideFeedback(feedback: String)
+    class FrontendApp {
+        +RefinementFlow
+        +ChatMessage
+        +store: Pinia
+        +handleUserInput()
+        +updateStoryState()
     }
 
-    class WorkflowManager {
-        -List~Step~ steps
-        -Step currentStep
-        +executeStep(): StepResult
-        +moveToNextStep(): void
-        +getCurrentStepStatus(): StepStatus
+    class RefinementFlow {
+        -currentStep: string
+        -storyData: Object
+        +nextStep()
+        +previousStep()
+        +updateStory()
     }
 
-    class Step {
-        <<interface>>
-        +execute(): StepResult
-        +validate(): boolean
+    class ChatMessage {
+        -message: string
+        -type: string
+        +render()
     }
 
-    class RefinementStep {
-        -DocumentRetriever documentRetriever
-        +execute(): StepResult
-    }
-
-    class CornerCaseStep {
-        -IssueAnalyzer issueAnalyzer
-        +execute(): StepResult
-    }
-
-    class TestingStep {
-        -CodeAnalyzer codeAnalyzer
-        +execute(): StepResult
+    class BackendAPI {
+        +FastAPI
+        +handleRequest()
+        +validateInput()
+        +processStory()
     }
 
     class LLMService {
-        -LLMClient llmClient
-        -PromptManager promptManager
-        +generateResponse(context: String): Response
+        -model: Llama32
+        -prompts: PromptManager
+        +generateRefinements()
+        +analyzeCornerCases()
+        +suggestTests()
     }
 
-    UserStoryAssistant --> WorkflowManager
-    UserStoryAssistant --> LLMService
+    class PromptManager {
+        +refinementPrompt: string
+        +cornerCasePrompt: string
+        +testingPrompt: string
+        +getContextualPrompt()
+    }
 
-    WorkflowManager --> Step
-    Step <|-- RefinementStep
-    Step <|-- CornerCaseStep
-    Step <|-- TestingStep
+    class DatabaseService {
+        +PostgreSQL
+        +storeStory()
+        +retrieveHistory()
+        +updateStatus()
+    }
+
+    class JiraIntegration {
+        +syncStory()
+        +updateTicket()
+        +fetchMetadata()
+    }
+
+    FrontendApp --> RefinementFlow
+    FrontendApp --> ChatMessage
+    RefinementFlow ..> BackendAPI: HTTP/REST
+    BackendAPI --> LLMService
+    LLMService --> PromptManager
+    BackendAPI --> DatabaseService
+    BackendAPI --> JiraIntegration
 ```
 
 ### **3.2. Descripción de componentes principales**
@@ -242,11 +336,106 @@ Esta estructura separa claramente las responsabilidades entre el backend y el fr
 
 ---
 
-## 4. Modelo de datos
+## 4. Tests y CI/CD
 
-> Describe el modelo de datos utilizado en el sistema, incluyendo entidades principales, relaciones y cualquier esquema relevante.
+### **4.1. Estado de los Tests**
 
-**TBD**
+- **Tests Unitarios**: Cubren la lógica de negocio y componentes individuales.
+- **Tests de Integración**: Verifican la interacción entre componentes y servicios.
+- **Tests End-to-End**: Simulan el flujo de usuario completo.
+
+### **4.2. Ejecutar Tests Localmente**
+
+1. **Tests del Backend**:
+   ```bash
+   cd backend
+   poetry run pytest
+   ```
+
+2. **Tests del Frontend**:
+   ```bash
+   cd frontend
+   npm run test:unit
+   ```
+
+### **4.3. Requisitos de Calidad**
+
+- **Cobertura de Código**: 80% como mínimo.
+- **Complejidad Ciclomática**: Menos de 10.
+
+### **4.4. Proceso de Pull Request**
+
+1. **Crear una Rama**: Desde `main`, crea una rama con el nombre del feature o fix.
+2. **Desarrollar y Probar**: Implementa el cambio y ejecuta los tests locales.
+3. **Crear Pull Request**: En GitHub, crea un PR desde tu rama hacia `main`.
+4. **Revisión de Código**: Otro miembro del equipo revisa el código y aprueba.
+5. **Merge**: Una vez aprobado, se mergea el PR hacia `main`.
+
+### **4.5. GitHub Actions Workflow**
+
+#### Descripción del Workflow de Integración Continua
+
+El proyecto utiliza GitHub Actions para automatizar la ejecución de tests en cada pull request y push a las ramas principales. El workflow está diseñado para garantizar la calidad del código mediante una serie de pasos automatizados:
+
+1. **Checkout del Código**
+   - Descarga la última versión del código del repositorio
+   - Prepara el entorno para ejecutar los tests
+
+2. **Configuración del Entorno de Backend**
+   - Instala Python en la versión 3.10
+   - Configura Poetry para gestión de dependencias
+   - Instala todas las dependencias del proyecto de backend
+   - Ejecuta los tests de Python utilizando pytest
+   - Genera informe de cobertura de código
+
+3. **Configuración del Entorno de Frontend**
+   - Instala Node.js versión 20.x
+   - Configura npm para gestión de dependencias
+   - Instala todas las dependencias del proyecto frontend
+   - Ejecuta tests unitarios de Vue.js
+   - Genera informe de cobertura de código
+
+4. **Verificación de Cobertura de Código**
+   - Analiza los informes de cobertura de backend y frontend
+   - Requiere un mínimo del 80% de cobertura de código
+   - Almacena los informes de cobertura como artefactos
+   - Bloquea la integración si no se alcanza el umbral de cobertura
+
+5. **Desencadenantes del Workflow**
+   - Se activa automáticamente en:
+     * Pull requests a las ramas `main` y `develop`
+     * Pushes directos a `main` y `develop`
+   - Permite detectar problemas antes de mergear código
+
+#### Beneficios del Workflow
+
+- **Detección Temprana de Errores**: 
+  - Ejecuta tests automáticamente antes de mergear código
+  - Identifica problemas de compatibilidad o regresiones
+
+- **Consistencia**: 
+  - Asegura que todos los tests pasen en el entorno de desarrollo
+  - Mantiene un estándar de calidad en cada contribución
+
+- **Transparencia**: 
+  - Muestra el estado de los tests directamente en GitHub
+  - Proporciona retroalimentación inmediata a los desarrolladores
+
+- **Calidad de Código**: 
+  - Previene la introducción de código que rompa los tests existentes
+  - Garantiza un nivel mínimo de cobertura de código
+  - Facilita la revisión y mejora continua del proyecto
+
+#### Visualización de Resultados
+
+Los resultados de los tests se pueden ver:
+- En la pestaña "Actions" del repositorio de GitHub
+- Como checks de status en cada pull request
+- Notificaciones por correo en caso de fallos
+
+**Nota**: Para contribuir al proyecto, asegúrate de que todos los tests pasen y se alcance el 80% de cobertura de código antes de crear un pull request.
+
+---
 
 ## 5. Especificación de la API
 
@@ -345,7 +534,7 @@ Para US-007: Ejecutar Paso de Refinamiento
 - Implementar autenticación de usuarios
 - Desarrollar componentes básicos de la interfaz
 
-## 8. Pull Requests
+## 8. Pull requests
 
 > Documenta 3 de las Pull Requests realizadas durante la ejecución del proyecto
 
@@ -423,3 +612,110 @@ Para US-007: Ejecutar Paso de Refinamiento
 ![Interfaz de Refinamiento Paso 1](ruta/a/tu/captura_paso1.png)
 ![Interfaz de Refinamiento Paso 2](ruta/a/tu/captura_paso2.png)
 ![Interfaz de Refinamiento Paso 3](ruta/a/tu/captura_paso3.png)
+
+## 9. Roadmap
+
+El siguiente roadmap describe las funcionalidades planificadas para futuras versiones del asistente.
+
+### **9.1. Q1 2025**
+
+#### Mejoras Base
+- Optimización de prompts y respuestas
+- Mejora de la interfaz actual
+- Documentación completa
+- Corrección de bugs reportados
+- Implementación de streaming de respuestas de LLM
+  * Mostrar respuestas en tiempo real, similar a ChatGPT
+  * Reducir la percepción de latencia para el usuario
+  * Mejorar la experiencia de usuario durante el refinamiento
+- Optimización de la generación de prompts
+- Mejora de la precisión en la identificación de casos esquina
+
+#### Testing y Calidad
+- Tests end-to-end con Selenium y Cucumber (BDD)
+- Tests de rendimiento con k6
+- Monitorización de tiempos de respuesta
+
+#### Autenticación y Persistencia
+- Sistema de login con múltiples proveedores
+- Persistencia de sesiones
+- Gestión de perfiles de usuario
+- Control de acceso basado en roles
+
+#### Internacionalización
+- Soporte de idiomas (español e inglés)
+- Traducción de interfaces
+- Gestión de recursos i18n
+- Detección automática de idioma
+
+### **9.2. Q2-Q3 2025**
+
+#### Integración y Conectividad
+- Sistema RAG para contexto de proyecto desde Jira
+- Integración con Confluence para documentación
+- Conexión con GitHub para seguimiento de código
+- API pública para integraciones personalizadas
+
+#### Personalización
+- Configuración flexible de pasos de refinamiento
+- Selección de formatos (Gherkin, Given-When-Then, etc.)
+- Templates personalizables por equipo
+- Configuración de reglas de validación
+
+### **9.3. Q4 2025 - Q1 2026**
+
+#### Análisis y Mejora Continua
+- Sistema de feedback para el LLM
+- Métricas de calidad de historias
+- Dashboard de analytics
+- Detección de patrones problemáticos
+
+#### Colaboración en Tiempo Real
+- Sesiones multiusuario
+- Comentarios y anotaciones
+- Sistema de votación
+- Historial de cambios con diff
+
+#### Automatización Avanzada
+- Generación de diagramas técnicos
+- Estimación automática
+- Análisis de dependencias
+- Detección de duplicados
+
+### **9.4. 2026**
+
+#### Integración con Desarrollo
+- Generación de código base
+- Sugerencia de tests
+- Vinculación con PRs
+- Análisis de impacto
+
+#### Gestión del Conocimiento
+- Base de conocimiento auto-mantenida
+- Captura de decisiones técnicas
+- Vinculación con documentación
+- Templates evolutivos
+
+#### Calidad y Cumplimiento
+- Verificación de compliance
+- Chequeo de seguridad
+- Validación contra estándares
+- Sistema de alertas
+
+#### Experiencia de Usuario
+- Interfaz adaptativa según rol/experiencia
+- Atajos de teclado personalizables
+- Temas visuales y accesibilidad
+
+### **9.5. Priorización y Feedback**
+
+Las prioridades del roadmap se ajustarán según:
+- Feedback de usuarios
+- Necesidades del mercado
+- Viabilidad técnica
+- Valor añadido al producto
+
+Para sugerir nuevas funcionalidades o prioridades, por favor:
+1. Abre un issue con la etiqueta "feature-request"
+2. Describe el caso de uso y beneficios
+3. Proporciona ejemplos si es posible
