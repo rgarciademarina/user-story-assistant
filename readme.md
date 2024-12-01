@@ -23,9 +23,9 @@
 
 ## 0. Ficha del proyecto
 
-### **0.1. Tu nombre completo:**
+### **0.1. Autor:**
 
-Raúl García de Marina Maroto
+rgarciademarina
 
 ### **0.2. Nombre del proyecto:**
 
