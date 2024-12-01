@@ -121,10 +121,13 @@ export default {
       // Procesar encabezados especiales
       processedContent = processedContent.replace(/^####\s+(.*?)$/gm, '<h4>$1</h4>');
       
-      // Procesar palabras clave con saltos de línea
-      processedContent = processedContent.replace(/\*\*Dado\*\*/g, '<strong class="keyword">Dado</strong> ');
-      processedContent = processedContent.replace(/\*\*Cuando\*\*/g, '<strong class="keyword">Cuando</strong> ');
-      processedContent = processedContent.replace(/\*\*Entonces\*\*/g, '<strong class="keyword">Entonces</strong> ');
+      // Procesar palabras clave Gherkin
+      processedContent = processedContent.replace(/\*\*Dado\*\*/g, '<div class="gherkin-step"><strong class="keyword">Dado</strong>');
+      processedContent = processedContent.replace(/\*\*Cuando\*\*/g, '<div class="gherkin-step"><strong class="keyword">Cuando</strong>');
+      processedContent = processedContent.replace(/\*\*Entonces\*\*/g, '<div class="gherkin-step"><strong class="keyword">Entonces</strong>');
+      
+      // Cerrar los divs de los pasos
+      processedContent = processedContent.replace(/\n/g, '</div>\n');
       
       this.previewContent = md.render(processedContent);
     },
@@ -366,8 +369,13 @@ export default {
 .preview-container :deep(.keyword) {
   color: #569CD6;
   font-weight: 600;
+  display: inline;
+  margin-right: 0.5em;
+}
+
+.preview-container :deep(.gherkin-step) {
+  margin: 0.8em 0;
   display: block;
-  margin: 1em 0 0.5em;
 }
 
 .preview-container :deep(p) {

@@ -213,7 +213,7 @@ export default createStore({
     async updateOrCreateJiraStory({ commit }, { content, jiraId }) {
       try {
         commit('setIsLoadingJira', true);
-        const response = await axios.post('/api/jira/story', {
+        const response = await axios.post('/api/v1/jira/story', {
           title: 'User Story',
           description: content,
           story_id: jiraId
