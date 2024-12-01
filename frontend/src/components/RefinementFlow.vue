@@ -34,7 +34,15 @@
           <button
             v-if="currentStep !== 'finished'"
             @click="advanceStep"
-            :class="['advance-button', advanceButtonClass]"
+            :class="[
+              'advance-button',
+              advanceButtonClass,
+              {
+                'btn-corner-cases': currentStep === 'cornerCases' || currentStep === 'refineStory',
+                'btn-testing-strategy': currentStep === 'testingStrategy',
+                'btn-review': currentStep === 'review'
+              }
+            ]"
             :disabled="!canAdvance"
           >
             {{ nextButtonLabel }}
@@ -502,5 +510,21 @@ export default {
 button {
   padding: 6px 12px;
   font-size: 14px;
+}
+
+/* Estilos para los botones de avance */
+.btn-corner-cases, .btn-testing-strategy, .btn-review {
+  background-color: #34c759;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.btn-corner-cases:disabled, .btn-testing-strategy:disabled, .btn-review:disabled {
+  background-color: #666;
+  cursor: not-allowed;
 }
 </style>
