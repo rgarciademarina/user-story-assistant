@@ -199,6 +199,9 @@ export default {
             console.warn('Paso no manejado:', this.currentStep);
         }
         this.userInput = '';
+        this.$nextTick(() => {
+          this.focusInput();
+        });
       } catch (error) {
         console.error('Error al procesar feedback:', error);
         this.showToastMessage('Error al procesar el feedback', 'error');

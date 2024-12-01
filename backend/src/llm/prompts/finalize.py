@@ -17,27 +17,9 @@ finalize_story_prompt = """Eres un experto en historias de usuario y testing. DE
 #### Estrategia de Testing
 [Lista breve de estrategias clave]
 
-#### Test 1 - [Escenario Crítico 1]
-**Dado** [precondición con valores específicos]  
-**Cuando** [acción con valores específicos]  
-**Entonces** [resultado con mensaje exacto]  
-
-#### Test 2 - [Escenario Crítico 2]
-**Dado** [precondición con valores específicos]  
-**Cuando** [acción con valores específicos]  
-**Entonces** [resultado con mensaje exacto]  
-
-#### Test 3 - [Escenario Crítico 3]
-**Dado** [precondición con valores específicos]  
-**Cuando** [acción con valores específicos]  
-**Entonces** [resultado con mensaje exacto]  
-
-#### Test 4 - [Escenario Crítico 4]
-**Dado** [precondición con valores específicos]  
-**Cuando** [acción con valores específicos]  
-**Entonces** [resultado con mensaje exacto]  
-
-#### Test 5 - [Escenario Crítico 5]
+#### Tests
+**Añade tantos tests como sean necesarios, siguiendo el formato Gherkin estricto:**
+#### Test [Número] - [Escenario Crítico]
 **Dado** [precondición con valores específicos]  
 **Cuando** [acción con valores específicos]  
 **Entonces** [resultado con mensaje exacto]  
