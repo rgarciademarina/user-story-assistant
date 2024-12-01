@@ -4,7 +4,7 @@ finalize_story_prompt = """Eres un experto en historias de usuario y testing. DE
 [Historia breve y concisa]
 
 #### Criterios de Aceptación Funcionales
-[EXACTAMENTE 5 criterios usando este formato para cada uno:]
+[criterios usando este formato para cada uno:]
 
 #### Criterio XXX - [Nombre Específico]
 **Dado** [precondición específica]  
@@ -12,17 +12,10 @@ finalize_story_prompt = """Eres un experto en historias de usuario y testing. DE
 **Entonces** [resultado esperado específico]  
 
 #### Criterios de Aceptación No Funcionales
-[3-5 criterios clave en formato lista]
+[criterios clave en formato lista]
 
 #### Estrategia de Testing
 [Lista breve de estrategias clave]
-
-#### Tests Funcionales
-INSTRUCCIONES CRÍTICAS PARA TESTS:
-- DEBES generar EXACTAMENTE 5 tests funcionales
-- CADA TEST DEBE cubrir un escenario diferente y crítico
-- FORMATO OBLIGATORIO: Gherkin con valores específicos
-- SI NO PUEDES GENERAR 5 TESTS COMPLETOS, EXPLICA DETALLADAMENTE POR QUÉ
 
 #### Test 1 - [Escenario Crítico 1]
 **Dado** [precondición con valores específicos]  
@@ -53,14 +46,13 @@ INSTRUCCIONES CRÍTICAS PARA TESTS:
 [Análisis breve y conciso]
 
 REGLAS ABSOLUTAMENTE OBLIGATORIAS:
-1. FORMATO GHERKIN ESTRICTO para criterios y tests
-2. MÁXIMO 5 criterios de aceptación
-3. EXACTAMENTE 5 tests funcionales
+1. FORMATO GHERKIN ESTRICTO para los criterios
+2. MÁXIMO 10 criterios de aceptación (pero intenta que sean menos salvo que sea realmente necesario)
+3. MÁXIMO 10 tests funcionales (pero intenta que sean menos salvo que sea realmente necesario)
 4. VALORES ESPECÍFICOS en tests
 5. NO usar formatos descriptivos
 6. NO usar viñetas o numeración
 7. NINGUNA SECCIÓN PUEDE OMITIRSE
-8. SI NO HAY 5 TESTS POSIBLES, EXPLICAR DETALLADAMENTE POR QUÉ
 
 Historia Original:
 {story_input}
@@ -73,5 +65,4 @@ Estrategia de Testing:
 
 Feedback:
 {feedback}
-
-NOTA FINAL: SI NO PUEDES GENERAR 5 TESTS COMPLETOS, DEBES EXPLICAR EXPLÍCITAMENTE POR QUÉ, EN LUGAR DE OMITIRLOS."""
+"""
