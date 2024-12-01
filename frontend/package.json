@@ -14,7 +14,9 @@
     "axios": "^1.7.7",
     "core-js": "^3.8.3",
     "markdown-it": "^12.3.2",
+    "marked": "^15.0.3",
     "vue": "^3.2.13",
+    "vue-easymde": "^2.0.0",
     "vuex": "^4.0.0",
     "vuex-persistedstate": "^4.1.0"
   },

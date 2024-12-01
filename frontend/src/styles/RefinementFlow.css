@@ -102,3 +102,101 @@
   color: #aaa;
   margin-top: 10px;
 }
+
+/* Estilos para el formato Gherkin dentro de los mensajes */
+.message pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: 0;
+  font-family: monospace;
+  background-color: #252525;
+  padding: 1rem;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+/* Estilos para formato Gherkin */
+.message-content pre {
+  background-color: #2a2a2a;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.message-content code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em;
+}
+
+/* Palabras clave de Gherkin en español */
+.message-content pre code strong {
+  font-weight: bold;
+  color: #42b983;
+}
+
+/* Resaltar palabras clave de Gherkin */
+.message-content pre code:contains("Dado"), 
+.message-content pre code:contains("Cuando"),
+.message-content pre code:contains("Entonces"),
+.message-content pre code:contains("Y") {
+  color: #42b983;
+  font-weight: bold;
+}
+
+/* Sangría para Y (And) */
+.message-content pre code:contains("Y") {
+  padding-left: 1em;
+}
+
+/* Separación entre escenarios */
+.message-content pre + pre {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #444;
+}
+
+.btn-corner-cases,
+.btn-testing-strategy,
+.btn-review {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-corner-cases:hover,
+.btn-testing-strategy:hover,
+.btn-review:hover {
+  background-color: #218838 !important;
+}
+
+.advance-button.btn-corner-cases,
+.advance-button.btn-testing-strategy,
+.advance-button.btn-review {
+  background-color: #28a745 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  transition: opacity 0.3s ease, background-color 0.3s ease !important;
+}
+
+.advance-button.btn-corner-cases:disabled,
+.advance-button.btn-testing-strategy:disabled,
+.advance-button.btn-review:disabled {
+  background-color: #28a745 !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.advance-button.btn-corner-cases:hover:not(:disabled),
+.advance-button.btn-testing-strategy:hover:not(:disabled),
+.advance-button.btn-review:hover:not(:disabled) {
+  background-color: #218838 !important;
+}

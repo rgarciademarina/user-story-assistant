@@ -5,6 +5,10 @@ node_modules
 # Testing
 /coverage/
 /tests/e2e/logs/
+# Code coverage
+.nyc_output/
+coverage/
+*.lcov
 
 # local env files
 .env.local

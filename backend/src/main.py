@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from src.api.routes.refine_story import router as refine_story_router
 from src.api.routes.identify_corner_cases import router as identify_corner_cases_router
 from src.api.routes.propose_testing_strategy import router as propose_testing_strategy_router
+from src.api.routes.jira_integration import router as jira_integration_router
+from src.api.routes.finalize_story import router as finalize_story_router
+from src.llm.config import get_llm_config
+
 
 app = FastAPI(
     title="User Story Assistant",
@@ -12,6 +16,8 @@ app = FastAPI(
 app.include_router(refine_story_router, prefix="/api/v1")
 app.include_router(identify_corner_cases_router, prefix="/api/v1")
 app.include_router(propose_testing_strategy_router, prefix="/api/v1")
+app.include_router(jira_integration_router, prefix="/api/v1")
+app.include_router(finalize_story_router, prefix="/api/v1")
 
 @app.get("/")
 async def read_root():

@@ -13,6 +13,7 @@ from uuid import uuid4, UUID
 from .prompts.refinement import refinement_prompt
 from .prompts.corner_case import corner_case_prompt
 from .prompts.testing import testing_strategy_prompt
+from .prompts.finalize import finalize_story_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,8 @@ class LLMService:
         self.llm = llm if llm is not None else OllamaLLM(
             model=config.MODEL_NAME,
             base_url=config.OLLAMA_BASE_URL,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            context_window=config.MAX_LENGTH
         )
 
         # Inicializar diccionarios de sesiones y memorias
@@ -45,6 +47,7 @@ class LLMService:
         self.refinement_prompt = refinement_prompt
         self.corner_case_prompt = corner_case_prompt
         self.testing_strategy_prompt = testing_strategy_prompt
+        self.finalize_story_prompt = finalize_story_prompt
 
     def create_session(self) -> UUID:
         """Crea una nueva sesión y devuelve su ID."""
@@ -314,6 +317,71 @@ class LLMService:
             logger.error(f"Error en propose_testing_strategy: {str(e)}")
             raise
 
+    async def finalize_story(
+        self,
+        session_id: UUID,
+        story_input: str,
+        corner_cases: Optional[List[str]] = None,
+        testing_strategy: Optional[List[str]] = None,
+        feedback: Optional[str] = None,
+        format_preferences: Optional[dict] = None
+    ) -> Dict[str, Any]:
+        """Finaliza una historia de usuario integrando todos los componentes."""
+        try:
+            session = self._get_session(session_id)
+
+            def update_session(session, result):
+                session.finalized_story = result.get('finalized_story', '')
+                session.functional_tests = result.get('functional_tests', '')
+
+            def format_interaction(result):
+                human_message = (
+                    "Historia de Usuario:\n{}\n\n"
+                    "Casos Esquina:\n{}\n\n"
+                    "Estrategia de Testing:\n{}\n\n"
+                    "Feedback:\n{}".format(
+                        story_input,
+                        '\n'.join(corner_cases) if corner_cases else 'Sin casos esquina',
+                        '\n'.join(testing_strategy) if testing_strategy else 'Sin estrategia de testing',
+                        feedback or 'Sin feedback adicional'
+                    )
+                )
+                ai_message = result.get('finalized_story', '')
+                return human_message, ai_message
+
+            def post_process_response(extracted_sections):
+                finalized_story = extracted_sections.get('**Historia Finalizada:**', '').strip()
+                functional_tests = extracted_sections.get('#### Tests Funcionales', '').strip()
+                return {
+                    'finalized_story': finalized_story,
+                    'functional_tests': functional_tests,
+                    'feedback': ''  
+                }
+
+            result = await self._process_step(
+                session_id=session_id,
+                prompt_template=self.finalize_story_prompt,
+                input_variables={
+                    "story_input": story_input,
+                    "corner_cases": corner_cases or [],
+                    "testing_strategy": testing_strategy or [],
+                    "feedback": feedback or ""
+                },
+                process_state=ProcessState.FINALIZATION,
+                extract_markers=[
+                    "**Historia Finalizada:**", 
+                    "#### Tests Funcionales"  
+                ],
+                update_session_callback=update_session,
+                format_interaction=format_interaction,
+                post_process_response=post_process_response
+            )
+
+            return result
+        except Exception as e:
+            logger.error(f"Error en finalize_story: {str(e)}")
+            raise
+
     def _extract_sections(self, text: str, markers: List[str]) -> Dict[str, str]:
         """Extrae secciones de texto basadas en marcadores."""
         sections = {}
@@ -330,9 +398,22 @@ class LLMService:
                 logger.warning(f"Texto no es string: {type(text)}")
                 return str(text)
 
+            # Normalizar el texto y los marcadores
+            text = text.strip()
+            start_marker = start_marker.strip()
+            if end_marker:
+                end_marker = end_marker.strip()
+
+            logger.debug(f"Buscando sección entre marcadores. Inicio: '{start_marker}', Fin: '{end_marker}'")
+            logger.debug(f"Texto completo a procesar: {text[:200]}...")  # Log primeros 200 caracteres
+
             start_idx = text.find(start_marker)
             if start_idx == -1:
-                logger.warning(f"No se encontró el marcador inicial: {start_marker}")
+                logger.warning(f"No se encontró el marcador inicial: '{start_marker}' en el texto")
+                # Buscar marcadores similares para ayudar en el diagnóstico
+                possible_markers = [line for line in text.split('\n') if '**' in line]
+                if possible_markers:
+                    logger.warning(f"Marcadores similares encontrados: {possible_markers}")
                 return ""
 
             start_idx += len(start_marker)
@@ -340,16 +421,19 @@ class LLMService:
                 end_idx = text.find(end_marker, start_idx)
                 if end_idx == -1:
                     result = text[start_idx:].strip()
-                    logger.debug(f"No se encontró el marcador final. Retornando: {result}")
+                    logger.debug(f"No se encontró el marcador final '{end_marker}'. Retornando resto del texto: {result[:100]}...")
                     return result
                 result = text[start_idx:end_idx].strip()
-                logger.debug(f"Sección extraída: {result}")
+                logger.debug(f"Sección extraída con éxito: {result[:100]}...")
                 return result
+            
             result = text[start_idx:].strip()
-            logger.debug(f"Sección extraída (sin marcador final): {result}")
+            logger.debug(f"Sección extraída (sin marcador final): {result[:100]}...")
             return result
+
         except Exception as e:
             logger.error(f"Error al extraer sección: {str(e)}")
+            logger.error(f"Texto problemático: {text[:200]}...")  # Log texto problemático
             return ""
 
     async def _add_to_memory(self, session_id: UUID, human_message: str, ai_message: str):

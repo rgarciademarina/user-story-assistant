@@ -208,3 +208,62 @@ class MockLLMService(LLMService):
             "testing_strategies": strategies,
             "testing_feedback": "Se han definido estrategias que cubren aspectos de seguridad, rendimiento y funcionalidad del sistema."
         }
+
+    async def finalize_story(
+        self,
+        session_id: Optional[UUID],
+        story_input: Optional[str] = None,
+        corner_cases: Optional[List[str]] = None,
+        testing_strategy: Optional[List[str]] = None,
+        feedback: Optional[str] = None,
+        format_preferences: Optional[Dict[str, str]] = None
+    ) -> Dict[str, Union[str, List[str]]]:
+        """Mock para finalizar una historia de usuario"""
+        # Si tenemos corner_cases y testing_strategy, es una solicitud con componentes individuales
+        if corner_cases and testing_strategy:
+            return {
+                "finalized_story": """Historia Principal:
+Como usuario registrado quiero iniciar sesión con email y contraseña
+
+Criterios de Aceptación:
+Given un usuario registrado
+When intenta iniciar sesión con credenciales correctas
+Then debe obtener acceso a su cuenta
+
+Given credenciales inválidas
+When intenta iniciar sesión múltiples veces
+Then debe bloquear la cuenta temporalmente""",
+                "feedback": "Se ha generado una historia completa integrando los casos esquina y estrategias de testing proporcionados.",
+                "acceptance_criteria": [
+                    "Given un usuario registrado When intenta iniciar sesión Then debe validar sus credenciales",
+                    "Given múltiples intentos fallidos When excede el límite Then debe bloquear la cuenta"
+                ],
+                "functional_tests": [
+                    "test_login_with_valid_credentials",
+                    "test_account_lockout_after_failed_attempts"
+                ]
+            }
+        else:
+            # Si solo tenemos story_input y feedback, es una iteración sobre una historia existente
+            return {
+                "finalized_story": """Historia Principal:
+Como usuario registrado quiero iniciar sesión con email y contraseña
+
+Criterios de Aceptación:
+Given un usuario registrado
+When intenta iniciar sesión con credenciales correctas
+Then debe obtener acceso a su cuenta
+
+Given un usuario registrado
+When habilita la autenticación de dos factores
+Then debe recibir un código por SMS para completar el inicio de sesión""",
+                "feedback": "Se han añadido criterios para autenticación de dos factores según el feedback.",
+                "acceptance_criteria": [
+                    "Given un usuario registrado When intenta iniciar sesión Then debe validar sus credenciales",
+                    "Given credenciales válidas When se habilita 2FA Then debe enviar código por SMS"
+                ],
+                "functional_tests": [
+                    "test_login_with_valid_credentials",
+                    "test_two_factor_authentication"
+                ]
+            }

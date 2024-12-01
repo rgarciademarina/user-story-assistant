@@ -21,44 +21,93 @@
         :placeholder="inputPlaceholder"
         :disabled="isLoading"
       ></textarea>
-      <div class="button-group">
-        <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
-        <button
-          v-if="backButtonLabel"
-          @click="goBack"
-          class="back-button"
-        >
-          {{ backButtonLabel }}
-        </button>
-        <button
-          v-if="currentStep !== 'finished'"
-          @click="advanceStep"
-          :class="['advance-button', advanceButtonClass]"
-          :disabled="!canAdvance"
-        >
-          {{ nextButtonLabel }}
-        </button>
+      <div class="button-container">
+        <div class="main-buttons">
+          <button @click="sendFeedback" :disabled="isLoading || !userInput.trim()">Enviar</button>
+          <button
+            v-if="backButtonLabel"
+            @click="goBack"
+            class="back-button"
+          >
+            {{ backButtonLabel }}
+          </button>
+          <button
+            v-if="currentStep !== 'finished'"
+            @click="advanceStep"
+            :class="[
+              'advance-button',
+              advanceButtonClass,
+              {
+                'btn-corner-cases': currentStep === 'cornerCases' || currentStep === 'refineStory',
+                'btn-testing-strategy': currentStep === 'testingStrategy',
+                'btn-review': currentStep === 'review'
+              }
+            ]"
+            :disabled="!canAdvance"
+          >
+            {{ nextButtonLabel }}
+          </button>
+        </div>
+        <div v-if="currentStep === 'refineStory' && !refinedStory" class="jira-input-container">
+          <input
+            v-model="jiraStoryId"
+            :class="['jira-input', { 'is-valid': isValidJiraId }]"
+            placeholder="ID de Jira (ej: STORYASIS-1)"
+            :disabled="isLoadingJira"
+            @keydown.enter="handleKeyPress"
+          />
+          <button
+            @click="fetchJiraStory"
+            :disabled="isJiraButtonDisabled"
+            class="jira-button"
+            data-test="jira-button"
+          >
+            {{ isLoadingJira ? 'Recuperando...' : 'Recuperar historia' }}
+          </button>
+        </div>
       </div>
     </div>
+    <ToastNotification
+      :show="showToast"
+      :message="toastMessage"
+      :type="toastType"
+    />
+    <ReviewModal
+      v-model="isReviewModalOpen"
+      :content="composedStory"
+      :existing-jira-id="jiraStoryId"
+      :is-loading-jira="isLoadingJira"
+      @update:modelValue="handleModalVisibility"
+      @jira-action="handleJiraAction"
+    />
   </div>
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex';
+import { mapState, mapActions, mapMutations } from 'vuex';
 import ChatMessage from './ChatMessage.vue';
+import ToastNotification from './ToastNotification.vue';
+import ReviewModal from './ReviewModal.vue';
 
 export default {
+  name: 'RefinementFlow',
   components: {
     ChatMessage,
+    ToastNotification,
+    ReviewModal
   },
   data() {
     return {
       userInput: '',
+      jiraStoryId: '',
       isLoading: false,
+      showToast: false,
+      toastMessage: '',
+      toastType: 'info',
     };
   },
   computed: {
-    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies']),
+    ...mapState(['messages', 'currentStep', 'refinedStory', 'cornerCases', 'testingStrategies', 'isLoadingJira', 'jiraStoryId', 'isReviewModalOpen', 'composedStory']),
     currentStateLabel() {
       switch (this.currentStep) {
         case 'refineStory':
@@ -67,66 +116,97 @@ export default {
           return 'Casos Esquina';
         case 'testingStrategy':
           return 'Testing';
+        case 'composition':
+          return 'Composición';
         case 'finished':
-          return 'Proceso Completado';
+          return 'Finalizado';
         default:
           return '';
       }
     },
     nextButtonLabel() {
-      if (this.currentStep === 'refineStory') return 'Casos Esquina';
-      if (this.currentStep === 'cornerCases') return 'Testing';
-      if (this.currentStep === 'testingStrategy') return 'Finalizar';
-      return null;
+      switch (this.currentStep) {
+        case 'refineStory':
+          return 'Casos Esquina';
+        case 'cornerCases':
+          return 'Testing';
+        case 'testingStrategy':
+          return 'Composición';
+        case 'composition':
+          return 'Revisar';
+        default:
+          return '';
+      }
     },
     backButtonLabel() {
       if (this.currentStep === 'cornerCases') return 'Refinamiento';
       if (this.currentStep === 'testingStrategy') return 'Casos Esquina';
+      if (this.currentStep === 'composition') return 'Testing';
+      if (this.currentStep === 'finished') return 'Composición';
       return null;
     },
     advanceButtonClass() {
-      return this.currentStep === 'testingStrategy' ? 'finish-button' : 'next-button';
+      return this.currentStep === 'testingStrategy' ? 'next-button' : 'finish-button';
     },
     canAdvance() {
-      if (this.currentStep === 'refineStory') {
-        // Solo permitir avanzar si hay una historia refinada
-        return !!this.refinedStory;
+      switch (this.currentStep) {
+        case 'refineStory':
+          return !!this.refinedStory;
+        case 'cornerCases':
+          return !!this.cornerCases;
+        case 'testingStrategy':
+          return !!this.testingStrategies;
+        case 'review':
+          return true;
+        case 'composition':
+          return !!this.composedStory;
+        default:
+          return false;
       }
-      return true;
     },
     inputPlaceholder() {
       return this.isLoading ? 'Esperando respuesta...' : 'Escribe tu feedback aquí...';
     },
+    isValidJiraId() {
+      return /^[A-Z]+-\d+$/.test(this.jiraStoryId.trim());
+    },
+    isJiraButtonDisabled() {
+      return !this.isValidJiraId || this.isLoadingJira;
+    },
   },
   methods: {
-    ...mapActions([
-      'refineStory',
-      'identifyCornerCases',
-      'proposeTestingStrategy',
-      'addMessage',
-      'resetProcess',
-      'setCurrentStep',
-    ]),
+    ...mapActions(['refineStory', 'identifyCornerCases', 'proposeTestingStrategy', 'finalizeStory', 'addMessage', 'resetProcess', 'setCurrentStep', 'fetchJiraStory', 'composeStory', 'updateOrCreateJiraStory']),
+    ...mapMutations(['setCurrentStep', 'setIsReviewModalOpen', 'setLoadingJira']),
     async sendFeedback() {
       if (!this.userInput.trim()) return;
 
-      // Agregar el mensaje del usuario al historial
-      this.addMessage({ text: this.userInput, sender: 'user' });
-      const feedback = this.userInput;
-      this.userInput = '';
       this.isLoading = true;
-
       try {
-        if (this.currentStep === 'refineStory') {
-          await this.handleRefineFeedback(feedback);
-        } else if (this.currentStep === 'cornerCases') {
-          await this.handleCornerCasesFeedback(feedback);
-        } else if (this.currentStep === 'testingStrategy') {
-          await this.handleTestingStrategyFeedback(feedback);
+        switch (this.currentStep) {
+          case 'refineStory':
+            await this.handleRefineFeedback(this.userInput);
+            break;
+          case 'cornerCases':
+            await this.handleCornerCasesFeedback(this.userInput);
+            break;
+          case 'testingStrategy':
+            await this.handleTestingStrategyFeedback(this.userInput);
+            break;
+          case 'composition':
+            await this.handleCompositionFeedback(this.userInput);
+            break;
+          default:
+            console.warn('Paso no manejado:', this.currentStep);
         }
+        this.userInput = '';
+        this.$nextTick(() => {
+          this.focusInput();
+        });
+      } catch (error) {
+        console.error('Error al procesar feedback:', error);
+        this.showToastMessage('Error al procesar el feedback', 'error');
       } finally {
         this.isLoading = false;
-        this.focusInput();
       }
     },
     async handleRefineFeedback(feedback) {
@@ -165,8 +245,64 @@ export default {
         this.addMessage({ text: result.testingStrategyResponse, sender: 'assistant' });
       }
     },
+    async handleCompositionFeedback(feedback = '') {
+      const result = await this.$store.dispatch('composeStory', feedback);
+      if (result && result.compositionResponse) {
+        this.addMessage({ text: result.compositionResponse, sender: 'assistant' });
+      }
+    },
+    async finalizeStory() {
+      this.isLoading = true;
+      try {
+        const result = await this.$store.dispatch('finalizeStory', {
+          feedback: this.userInput || ''
+        });
+        
+        // Mostrar respuesta del backend
+        if (result && result.finalizationResponse) {
+          this.addMessage({ 
+            text: result.finalizationResponse, 
+            sender: 'assistant' 
+          });
+        }
+      } catch (error) {
+        this.showToastMessage('Error al finalizar la historia', 'error');
+        console.error(error);
+        throw error; // Relanzar para que advanceStep maneje el error
+      } finally {
+        this.isLoading = false;
+        this.userInput = ''; // Limpiar input después de finalizar
+      }
+    },
     async advanceStep() {
       if (this.isLoading) return;
+
+      if (this.currentStep === 'composition') {
+        // Abrir modal de revisión
+        this.setIsReviewModalOpen(true);
+        
+        // Finalizar la historia
+        this.isLoading = true;
+        try {
+          await this.finalizeStory();
+          
+          // Cambiar explícitamente al estado finished
+          this.setCurrentStep('finished');
+          
+          // Agregar mensaje de finalización
+          this.addMessage({
+            text: 'La historia ha sido finalizada. Puedes revisar todo el proceso o cerrar la ventana.',
+            sender: 'system'
+          });
+        } catch (error) {
+          // Manejar cualquier error en la finalización
+          this.showToastMessage('Error al finalizar la historia', 'error');
+          console.error(error);
+        } finally {
+          this.isLoading = false;
+        }
+        return;
+      }
 
       if (this.currentStep === 'refineStory') {
         // Verificar que hay una historia refinada antes de avanzar
@@ -201,29 +337,64 @@ export default {
           });
         }
       } else if (this.currentStep === 'testingStrategy') {
-        this.setCurrentStep('finished');
-        // Mensaje de finalización
-        this.addMessage({
-          text: '¡Proceso completado! Puedes revisar el resultado final.',
-          sender: 'system'
-        });
+        this.setCurrentStep('composition');
+        this.isLoading = true;
+        try {
+          // Obtener la composición inicial
+          await this.handleCompositionFeedback('');
+          // Agregar mensaje de composición
+          this.addMessage({
+            text: 'Has llegado a la fase de composición. Aquí puedes proporcionar feedback adicional para mejorar la historia de usuario. Cuando estés satisfecho, puedes avanzar para finalizar.',
+            sender: 'system'
+          });
+        } finally {
+          this.isLoading = false;
+        }
       }
-      this.focusInput();
     },
     goBack() {
       if (this.currentStep === 'cornerCases') {
         this.setCurrentStep('refineStory');
       } else if (this.currentStep === 'testingStrategy') {
         this.setCurrentStep('cornerCases');
+      } else if (this.currentStep === 'composition') {
+        this.setCurrentStep('testingStrategy');
+      } else if (this.currentStep === 'finished') {
+        this.setCurrentStep('composition');
       }
       this.focusInput();
     },
     focusInput() {
-      this.$nextTick(() => {
-        if (this.$refs.feedbackInput && this.currentStep !== 'finished') {
+      // Asegurarnos de que el textarea existe y no está deshabilitado
+      if (this.$refs.feedbackInput && !this.isLoading) {
+        this.$nextTick(() => {
           this.$refs.feedbackInput.focus();
+        });
+      }
+    },
+    async fetchJiraStory() {
+      try {
+        this.setLoadingJira(true);
+        const response = await fetch(`/api/v1/jira/story/${this.jiraStoryId}`);
+        if (!response.ok) {
+          throw new Error(response.status === 404 ? 'Historia no encontrada' : 'Error al recuperar la historia');
         }
-      });
+        const data = await response.json();
+        this.userInput = `${data.title}\n\n${data.description || ''}`;
+        this.showToastMessage('Historia recuperada correctamente', 'success');
+      } catch (error) {
+        this.showToastMessage(error.message, 'error');
+      } finally {
+        this.setLoadingJira(false);
+      }
+    },
+    showToastMessage(message, type = 'info') {
+      this.toastMessage = message;
+      this.toastType = type;
+      this.showToast = true;
+      setTimeout(() => {
+        this.showToast = false;
+      }, 3000);
     },
     previousUserStory() {
       const storyMessage = this.messages.find(
@@ -232,14 +403,24 @@ export default {
       return storyMessage ? storyMessage.text : '';
     },
     handleKeyPress(event) {
-      if (event.shiftKey) {
-        // Permitir el salto de línea
+      // Si es el campo de Jira y el ID es válido, recuperar la historia
+      if (event.target.classList.contains('jira-input')) {
+        if (this.isValidJiraId && !this.isLoadingJira) {
+          event.preventDefault();
+          this.fetchJiraStory();
+        }
         return;
-      } else {
-        // Prevenir el salto de línea y enviar el mensaje
-        event.preventDefault();
-        this.sendFeedback();
       }
+
+      // Si es el textarea
+      if (event.shiftKey) {
+        // Permitir el salto de línea con Shift+Enter
+        return;
+      }
+      
+      // Enviar el feedback
+      event.preventDefault();
+      this.sendFeedback();
     },
     scrollToBottom() {
       this.$nextTick(() => {
@@ -252,6 +433,18 @@ export default {
     addMessage(message) {
       this.$store.dispatch('addMessage', message);
       this.scrollToBottom();
+    },
+    async handleJiraAction({ content, jiraId }) {
+      const result = await this.updateOrCreateJiraStory({ content, jiraId });
+      if (result.success) {
+        const action = result.data.action === 'created' ? 'creada' : 'actualizada';
+        this.showToastMessage(`Historia ${action} correctamente en Jira: ${result.data.story_id}`, 'success');
+      } else {
+        this.showToastMessage(result.error, 'error');
+      }
+    },
+    handleModalVisibility(isOpen) {
+      this.setIsReviewModalOpen(isOpen);
     },
   },
   mounted() {
@@ -269,4 +462,85 @@ export default {
 
 <style scoped>
 @import '../styles/RefinementFlow.css';
+
+/* Sobreescribir estilos del contenedor de input */
+.input-container {
+  padding: 0.75rem 2rem;
+}
+
+.input-container textarea {
+  margin-bottom: 0.5rem;
+  min-height: 100px;
+  padding: 0.75rem;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.main-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.jira-input-container {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.jira-input {
+  width: 150px;
+  padding: 6px 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #2e2e2e;
+  color: #fff;
+  font-size: 14px;
+}
+
+.jira-input.is-valid {
+  border-color: #28a745;
+}
+
+.jira-button {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.jira-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
+
+/* Ajustar tamaño de todos los botones para que sean más compactos */
+button {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+/* Estilos para los botones de avance */
+.btn-corner-cases, .btn-testing-strategy, .btn-review {
+  background-color: #34c759;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.btn-corner-cases:disabled, .btn-testing-strategy:disabled, .btn-review:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
 </style>
