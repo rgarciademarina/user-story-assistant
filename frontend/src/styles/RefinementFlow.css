@@ -183,10 +183,20 @@
   border: none !important;
   border-radius: 4px !important;
   cursor: pointer !important;
+  opacity: 1 !important;
+  transition: opacity 0.3s ease, background-color 0.3s ease !important;
 }
 
-.advance-button.btn-corner-cases:hover,
-.advance-button.btn-testing-strategy:hover,
-.advance-button.btn-review:hover {
+.advance-button.btn-corner-cases:disabled,
+.advance-button.btn-testing-strategy:disabled,
+.advance-button.btn-review:disabled {
+  background-color: #28a745 !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.advance-button.btn-corner-cases:hover:not(:disabled),
+.advance-button.btn-testing-strategy:hover:not(:disabled),
+.advance-button.btn-review:hover:not(:disabled) {
   background-color: #218838 !important;
 }

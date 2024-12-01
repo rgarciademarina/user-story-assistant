@@ -127,11 +127,11 @@ export default {
     nextButtonLabel() {
       switch (this.currentStep) {
         case 'refineStory':
-          return 'Identificar casos límite';
+          return 'Casos Esquina';
         case 'cornerCases':
-          return 'Proponer estrategia de pruebas';
+          return 'Testing';
         case 'testingStrategy':
-          return 'Componer';
+          return 'Composición';
         case 'composition':
           return 'Revisar';
         default:
@@ -149,7 +149,20 @@ export default {
       return this.currentStep === 'testingStrategy' ? 'next-button' : 'finish-button';
     },
     canAdvance() {
-      return true;
+      switch (this.currentStep) {
+        case 'refineStory':
+          return !!this.refinedStory;
+        case 'cornerCases':
+          return !!this.cornerCases;
+        case 'testingStrategy':
+          return !!this.testingStrategies;
+        case 'review':
+          return true;
+        case 'composition':
+          return !!this.composedStory;
+        default:
+          return false;
+      }
     },
     inputPlaceholder() {
       return this.isLoading ? 'Esperando respuesta...' : 'Escribe tu feedback aquí...';
