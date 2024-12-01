@@ -624,6 +624,12 @@ El siguiente roadmap describe las funcionalidades planificadas para futuras vers
 - Mejora de la interfaz actual
 - Documentación completa
 - Corrección de bugs reportados
+- Implementación de streaming de respuestas de LLM
+  * Mostrar respuestas en tiempo real, similar a ChatGPT
+  * Reducir la percepción de latencia para el usuario
+  * Mejorar la experiencia de usuario durante el refinamiento
+- Optimización de la generación de prompts
+- Mejora de la precisión en la identificación de casos esquina
 
 #### Testing y Calidad
 - Tests end-to-end con Selenium y Cucumber (BDD)
