@@ -18,6 +18,14 @@ module.exports = {
   ],
   coverageReporters: ['text', 'html', 'lcov'],
   coverageDirectory: 'coverage',
+  coverageThreshold: {
+    global: {
+      branches: 0,
+      functions: 0,
+      lines: 0,
+      statements: 0
+    }
+  },
   transformIgnorePatterns: [
     'node_modules/(?!(axios)/)'
   ],
