@@ -15,6 +15,7 @@
 6. [Historias de usuario](#6-historias-de-usuario)
 7. [Tickets de trabajo](#7-tickets-de-trabajo)
 8. [Pull Requests](#8-pull-requests)
+9. [Roadmap](#9-roadmap)
 
 ---
 
@@ -344,17 +345,17 @@ Para US-007: Ejecutar Paso de Refinamiento
   - Añadidos archivos en `src/llm/`
   - Configuración de prompts en `src/llm/prompts/`
   - Tests unitarios para el servicio LLM
-- **Estado:** Mergeado
+- **Estado:** Integrado
 
 **Pull Request 2**
 
-- **Título:** Desarrollo de la Interfaz Gráfica con LangFlow
+- **Título:** Desarrollo de la Interfaz Gráfica con Vue
 - **Descripción:** Crea la interfaz gráfica básica utilizando LangFlow para la interacción con el asistente de refinamiento.
 - **Cambios Principales:**
-  - Añadidos archivos en `src/ui/`
-  - Configuración de LangFlow en `src/ui/app.py`
+  - Añadidos archivos en `/frontend`
+  - Configuración de Vue en `/6frontend`
   - Documentación de uso de la interfaz gráfica
-- **Estado:** Pendiente
+- **Estado:** Integrado
 
 **Pull Request 3**
 
@@ -364,4 +365,105 @@ Para US-007: Ejecutar Paso de Refinamiento
   - Añadidos archivos en `src/integrations/jira/`
   - Configuración de clientes Jira en `src/integrations/jira/client.py`
   - Tests de integración para el conector Jira
-- **Estado:** Pendiente
+- **Estado:** Integrado
+
+## 9. Roadmap
+
+El siguiente roadmap describe las funcionalidades planificadas para futuras versiones del asistente.
+
+### **9.1. Q1 2025**
+
+#### Mejoras Base
+- Optimización de prompts y respuestas
+- Mejora de la interfaz actual
+- Documentación completa
+- Corrección de bugs reportados
+
+#### Testing y Calidad
+- Tests end-to-end con Selenium y Cucumber (BDD)
+- Tests de rendimiento con k6
+- Monitorización de tiempos de respuesta
+
+#### Autenticación y Persistencia
+- Sistema de login con múltiples proveedores
+- Persistencia de sesiones
+- Gestión de perfiles de usuario
+- Control de acceso basado en roles
+
+#### Internacionalización
+- Soporte de idiomas (español e inglés)
+- Traducción de interfaces
+- Gestión de recursos i18n
+- Detección automática de idioma
+
+### **9.2. Q2-Q3 2025**
+
+#### Integración y Conectividad
+- Sistema RAG para contexto de proyecto desde Jira
+- Integración con Confluence para documentación
+- Conexión con GitHub para seguimiento de código
+- API pública para integraciones personalizadas
+
+#### Personalización
+- Configuración flexible de pasos de refinamiento
+- Selección de formatos (Gherkin, Given-When-Then, etc.)
+- Templates personalizables por equipo
+- Configuración de reglas de validación
+
+### **9.3. Q4 2025 - Q1 2026**
+
+#### Análisis y Mejora Continua
+- Sistema de feedback para el LLM
+- Métricas de calidad de historias
+- Dashboard de analytics
+- Detección de patrones problemáticos
+
+#### Colaboración en Tiempo Real
+- Sesiones multiusuario
+- Comentarios y anotaciones
+- Sistema de votación
+- Historial de cambios con diff
+
+#### Automatización Avanzada
+- Generación de diagramas técnicos
+- Estimación automática
+- Análisis de dependencias
+- Detección de duplicados
+
+### **9.4. 2026**
+
+#### Integración con Desarrollo
+- Generación de código base
+- Sugerencia de tests
+- Vinculación con PRs
+- Análisis de impacto
+
+#### Gestión del Conocimiento
+- Base de conocimiento auto-mantenida
+- Captura de decisiones técnicas
+- Vinculación con documentación
+- Templates evolutivos
+
+#### Calidad y Cumplimiento
+- Verificación de compliance
+- Chequeo de seguridad
+- Validación contra estándares
+- Sistema de alertas
+
+#### Experiencia de Usuario
+- Interfaz adaptativa según rol/experiencia
+- Atajos de teclado personalizables
+- Temas visuales y accesibilidad
+
+### **9.5. Priorización y Feedback**
+
+Las prioridades del roadmap se ajustarán según:
+- Feedback de usuarios
+- Necesidades del mercado
+- Viabilidad técnica
+- Valor añadido al producto
+
+Para sugerir nuevas funcionalidades o prioridades, por favor:
+1. Abre un issue con la etiqueta "feature-request"
+2. Describe el caso de uso y beneficios
+3. Proporciona ejemplos si es posible
