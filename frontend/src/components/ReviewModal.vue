@@ -30,7 +30,7 @@
             />
             <button
               @click="handleJiraAction"
-              :disabled="isLoadingJira || !isValidJiraId"
+              :disabled="isLoadingJira || !isJiraActionEnabled"
               class="jira-button"
             >
               {{ jiraButtonText }}
@@ -82,10 +82,15 @@ export default {
   },
   computed: {
     isValidJiraId() {
-      return /^[A-Z]+-\d+$/.test(this.jiraId);
+      return this.jiraId === '' || /^[A-Z]+-\d+$/.test(this.jiraId);
     },
     jiraButtonText() {
-      return this.isLoadingJira ? 'Cargando...' : 'Guardar en Jira';
+      if (this.isLoadingJira) return 'Cargando...';
+      return this.jiraId ? 'Guardar en Jira' : 'Crear nueva historia';
+    },
+    isJiraActionEnabled() {
+      return !this.isLoadingJira && 
+             (this.jiraId === '' || this.isValidJiraId);
     }
   },
   methods: {
@@ -93,11 +98,13 @@ export default {
       this.$emit('update:modelValue', false);
     },
     handleJiraAction() {
-      const jiraContent = this.convertToJiraFormat(this.localContent);
-      this.$emit('jira-action', {
-        content: jiraContent,
-        jiraId: this.jiraId
-      });
+      if (this.jiraId === '' || this.isValidJiraId) {
+        const jiraContent = this.convertToJiraFormat(this.localContent);
+        this.$emit('jira-action', {
+          content: jiraContent,
+          jiraId: this.jiraId
+        });
+      }
     },
     convertToJiraFormat(content) {
       let jiraContent = content;
