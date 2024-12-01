@@ -2,7 +2,7 @@
 
 0. [Ficha del proyecto](#0-ficha-del-proyecto)
 1. [Descripción general del producto](#1-descripción-general-del-producto)
-2. [Configuración del proyecto](#2-configuración-del-proyecto)
+2. [Instalación y Configuración](#2-instalación-y-configuración)
 3. [Arquitectura del sistema](#3-arquitectura-del-sistema)
    - [3.1. Diagrama de arquitectura](#31-diagrama-de-arquitectura)
    - [3.2. Descripción de componentes principales](#32-descripción-de-componentes-principales)
@@ -22,9 +22,9 @@
 
 ## 0. Ficha del proyecto
 
-### **0.1. Tu nombre completo:**
+### **0.1. Autor:**
 
-Raúl García de Marina Maroto
+rgarciademarina
 
 ### **0.2. Nombre del proyecto:**
 
@@ -66,40 +66,12 @@ Proporciona imágenes y/o videotutorial mostrando la experiencia del usuario des
 
 ---
 
-## 2. Configuración del proyecto
+## 2. Instalación y Configuración
 
-### **2.1. Instrucciones de instalación**
+Para instrucciones detalladas de instalación y configuración, por favor consulte:
 
-Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
-
-1. **Clonar el Repositorio**
-
-   ```bash
-   git clone https://github.com/rgarciademarina/AI4Devs-finalproject-RGM.git
-   cd AI4Devs-finalproject-RGM
-   ```
-
-2. **Instalar Dependencias**
-
-   ```bash
-   poetry install
-   ```
-
-3. **Configurar Variables de Entorno**
-
-   Crea un archivo `.env` basado en `.env.example` y completa las variables necesarias.
-
-4. **Ejecutar los Tests**
-
-   ```bash
-   poetry run pytest --log-cli-level=DEBUG
-   ```
-
-5. **Iniciar la Aplicación**
-
-   ```bash
-   python src/llm/run_model.py --model llama-3.2-11b
-   ```
+- [Instrucciones del Backend](./backend/README.md)
+- [Instrucciones del Frontend](./frontend/README.md)
 
 ---
 
