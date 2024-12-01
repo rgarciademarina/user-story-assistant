@@ -9,14 +9,12 @@
    - [3.3. Descripción de alto nivel del proyecto y estructura de ficheros](#33-descripción-de-alto-nivel-del-proyecto-y-estructura-de-ficheros)
 4. [Tests y CI/CD](#4-tests-y-cicd)
    - [4.1. Estado de los Tests](#41-estado-de-los-tests)
-   - [4.2. Ejecutar Tests Localmente](#42-ejecutar-tests-localmente)
-   - [4.3. Requisitos de Calidad](#43-requisitos-de-calidad)
-   - [4.4. Proceso de Pull Request](#44-proceso-de-pull-request)
-5. [Modelo de datos](#4-modelo-de-datos)
-6. [Especificación de la API](#5-especificación-de-la-api)
-7. [Historias de usuario](#6-historias-de-usuario)
-8. [Tickets de trabajo](#7-tickets-de-trabajo)
-9. [Pull requests](#8-pull-requests)
+   - [4.2. Requisitos de Calidad](#42-requisitos-de-calidad)
+   - [4.3. Proceso de Pull Request](#43-proceso-de-pull-request)
+5. [Modelo de datos](#5-modelo-de-datos)
+6. [Historias de usuario](#6-historias-de-usuario)
+7. [Tickets de trabajo](#7-tickets-de-trabajo)
+8. [Pull Requests](#8-pull-requests)
 
 ---
 
@@ -214,17 +212,34 @@ Esta estructura separa claramente las responsabilidades entre el backend y el fr
 
 ---
 
-## 4. Modelo de datos
+## 4. Tests y CI/CD
+
+### **4.1. Estado de los Tests**
+
+- **Tests Unitarios**: Cubren la lógica de negocio y componentes individuales.
+- **Tests de Integración**: Verifican la interacción entre componentes y servicios.
+- **Tests End-to-End**: Simulan el flujo de usuario completo.
+
+### **4.2. Requisitos de Calidad**
+
+- **Cobertura de Código**: 80% como mínimo.
+- **Complejidad Ciclomática**: Menos de 10.
+
+### **4.3. Proceso de Pull Request**
+
+1. **Crear una Rama**: Desde `main`, crea una rama con el nombre del feature o fix.
+2. **Desarrollar y Probar**: Implementa el cambio y ejecuta los tests locales.
+3. **Crear Pull Request**: En GitHub, crea un PR desde tu rama hacia `main`.
+4. **Revisión de Código**: Otro miembro del equipo revisa el código y aprueba.
+5. **Merge**: Una vez aprobado, se mergea el PR hacia `main`.
+
+---
+
+## 5. Modelo de datos
 
 > Describe el modelo de datos utilizado en el sistema, incluyendo entidades principales, relaciones y cualquier esquema relevante.
 
 **TBD**
-
-## 5. Especificación de la API
-
-> Detalla los endpoints de la API, métodos soportados, parámetros, respuestas y posibles códigos de estado.
-
-*(Contenido omitido)*
 
 ## 6. Historias de usuario
 
@@ -350,48 +365,3 @@ Para US-007: Ejecutar Paso de Refinamiento
   - Configuración de clientes Jira en `src/integrations/jira/client.py`
   - Tests de integración para el conector Jira
 - **Estado:** Pendiente
-
-## Interfaz Gráfica con LangFlow
-
-### Instalación
-
-1. **Navega al directorio del frontend:**
-    ```bash
-    cd src/ui
-    ```
-
-2. **Instala las dependencias:**
-    ```bash
-    npm install
-    # o si usas Yarn
-    yarn install
-    ```
-
-3. **Ejecuta la aplicación:**
-    ```bash
-    npm run serve
-    # o si usas Yarn
-    yarn serve
-    ```
-
-### Uso
-
-1. **Accede a la interfaz gráfica:**
-   Abre tu navegador y ve a `http://localhost:8080` (o el puerto que hayas configurado).
-
-2. **Proceso de Refinamiento:**
-   - **Paso 1: Mejora de Definición**
-     - Ingresa una historia de usuario en el formulario.
-     - Visualiza la historia refinada y confirma para avanzar.
-   - **Paso 2: Identificación de Casos Esquinas**
-     - Revisa los casos esquinas identificados.
-     - Confirma para avanzar.
-   - **Paso 3: Estrategia de Testing**
-     - Revisa las estrategias de testing recomendadas.
-     - Confirma para finalizar el proceso.
-
-### Capturas de Pantalla
-
-![Interfaz de Refinamiento Paso 1](ruta/a/tu/captura_paso1.png)
-![Interfaz de Refinamiento Paso 2](ruta/a/tu/captura_paso2.png)
-![Interfaz de Refinamiento Paso 3](ruta/a/tu/captura_paso3.png)
