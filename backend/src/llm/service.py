@@ -35,7 +35,8 @@ class LLMService:
         self.llm = llm if llm is not None else OllamaLLM(
             model=config.MODEL_NAME,
             base_url=config.OLLAMA_BASE_URL,
-            temperature=config.TEMPERATURE
+            temperature=config.TEMPERATURE,
+            context_window=config.MAX_LENGTH
         )
 
         # Inicializar diccionarios de sesiones y memorias
