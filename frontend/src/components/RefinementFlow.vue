@@ -182,6 +182,9 @@ export default {
 
       this.isLoading = true;
       try {
+        // Agregar el mensaje del usuario al estado
+        this.addMessage({ text: this.userInput, sender: 'user' });
+
         switch (this.currentStep) {
           case 'refineStory':
             await this.handleRefineFeedback(this.userInput);
